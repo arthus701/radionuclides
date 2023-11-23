@@ -51,6 +51,7 @@ if prefix == 'arch':
         knots=knots,
         coeffs=coeffs,
     )
+    exit()
 
 
 sm_cent = np.array(
