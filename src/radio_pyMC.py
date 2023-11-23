@@ -36,6 +36,7 @@ from common import (
     idx_SH,
     prod_Be10,
     calc_HPA,
+    prod_C14,
 )
 
 ref_coeffs = pt.as_tensor(_ref_coeffs)
@@ -198,14 +199,20 @@ with pm.Model() as mcModel:
     hpa = calc_HPA(gs_rad[:, 3], sm_rad)
 
     q_GL_cal = prod_Be10(fac*abs(gamma_0), mean_solar)
-    # XXX Parametrize the 0.05
-    cal_facs = q_GL_cal * (1 + s_fac*0.1)
+
+    q_C14 = prod_C14(dm, sm_rad)
+    q_C14_cal = prod_C14(fac*abs(gamma_0), mean_solar)
+
+    # XXX Parametrize the 0.1
+    cal_nh = q_GL_cal * (1 + s_fac[0]*0.1)
+    cal_sh = q_GL_cal * (1 + s_fac[1]*0.1)
+    cal_c14 = q_C14_cal * (1 + s_fac[2]*0.1)
 
     # XXX Estimate error levels?
     rNH = pm.Deterministic(
         'rNH',
         (
-            (q_GL * (1 + hpa / 2.))[idx_NH] / cal_facs[0]
+            (q_GL * (1 + hpa / 2.))[idx_NH] / cal_nh
             - radData.loc[idx_NH, 'Be10_NH'].values
         ) / 0.1,
     )
@@ -220,7 +227,7 @@ with pm.Model() as mcModel:
     rSH = pm.Deterministic(
         'rSH',
         (
-            (q_GL * (1 - hpa / 2.))[idx_SH] / cal_facs[1]
+            (q_GL * (1 - hpa / 2.))[idx_SH] / cal_sh
             - radData.loc[idx_SH, 'Be10_SH'].values
         ) / 0.1,
     )
@@ -232,17 +239,17 @@ with pm.Model() as mcModel:
         observed=np.zeros(len(idx_SH)),
     )
 
-    rGL = pm.Deterministic(
-        'rGL',
+    rC14 = pm.Deterministic(
+        'rC14',
         (
-            q_GL[idx_GL] / cal_facs[2]
+            q_C14[idx_GL] / cal_c14
             - radData.loc[idx_GL, 'C14'].values
         ) / 0.05,
     )
     c14_obs = pm.Normal(
         'C14',
         # nu=1 + nus[5],
-        mu=rGL,
+        mu=rC14,
         sigma=1.,
         observed=np.zeros(len(idx_GL)),
     )

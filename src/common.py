@@ -29,14 +29,27 @@ def calc_HPA(g20, phi):
     return hpa
 
 
+def prod_C14(dm, phi):
+    Q = 1 / (
+        0.09063
+        + 0.03115 * dm
+        + 0.0002615 * phi
+        - 0.0001024 * dm**2
+        + 1.91e-05 * dm * phi
+        + 1.071e-08 * phi**2
+    )
+
+    return Q
+
+
 def prod_Be10(dm, phi):
     Q = 1 / (
         5.576
-        + 1.896*dm
-        + 0.01375*phi
-        - 0.01299*dm**2
-        + 0.001494*dm*phi
-        - 2.851e-07*phi**2
+        + 1.896 * dm
+        + 0.01375 * phi
+        - 0.01299 * dm**2
+        + 0.001494 * dm * phi
+        - 2.851e-07 * phi**2
     )
 
     return Q
