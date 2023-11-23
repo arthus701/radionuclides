@@ -45,6 +45,14 @@ coeffs = np.hstack(
     )
 )
 
+if prefix == 'arch':
+    np.savez(
+        f'../dat/{prefix}_ensemble.npz',
+        knots=knots,
+        coeffs=coeffs,
+    )
+
+
 sm_cent = np.array(
     iData.posterior['sm_cent'],
 ).reshape(-1, len(knots_solar)-n_ref_solar)
