@@ -2,7 +2,7 @@
 """
 
 import numpy as np
-from pandas import read_table, cut
+from pandas import read_table, cut, read_csv
 
 from scipy.signal import butter, sosfiltfilt
 
@@ -63,45 +63,45 @@ lmax = 5
 
 # 2023-11-22
 # New parameters, estimated with cleaned dataset and gradients
-dip = 3
-R = 2800
-gamma_0 = -32.79
-alpha_dip = 39.60
-omega = 1 / 153.08602220031185
-xi = 1 / 48.71563374353433
-chi = np.sqrt(xi**2 + omega**2)
-alpha_wodip = 94.54
-tau_wodip = 513.9
+# dip = 3
+# R = 2800
+# gamma_0 = -32.79
+# alpha_dip = 39.60
+# omega = 1 / 153.08602220031185
+# xi = 1 / 48.71563374353433
+# chi = np.sqrt(xi**2 + omega**2)
+# alpha_wodip = 94.54
+# tau_wodip = 513.9
 
-scl = np.flip(np.unique(scaling(R, REARTH, lmax)))
-_alphas = np.ones(lmax) * alpha_wodip
-_alphas *= scl
-alpha_dip *= scl[0]
-_taus = tau_wodip / (np.arange(lmax)+1)
+# scl = np.flip(np.unique(scaling(R, REARTH, lmax)))
+# _alphas = np.ones(lmax) * alpha_wodip
+# _alphas *= scl
+# alpha_dip *= scl[0]
+# _taus = tau_wodip / (np.arange(lmax)+1)
 
 # 2023-09-13
 # Try two parameter axial dipole, pfm9k.2 parameters
-# dip = 1
-# R = REARTH
-# gamma_0 = -32.5
-# alpha_dip = 10
-# omega = 1/741
-# chi = 1/138
-# xi = np.sqrt(chi**2 - omega**2)
-# _alphas = [
-#     3.5,
-#     1.765,
-#     1.011,
-#     0.455,
-#     0.177,
-# ]
-# _taus = [
-#     200,
-#     133,
-#     174,
-#     137,
-#     95,
-# ]
+dip = 1
+R = REARTH
+gamma_0 = -32.5
+alpha_dip = 10
+omega = 1/741
+chi = 1/138
+xi = np.sqrt(chi**2 - omega**2)
+_alphas = [
+    3.5,
+    1.765,
+    1.011,
+    0.455,
+    0.177,
+]
+_taus = [
+    200,
+    133,
+    174,
+    137,
+    95,
+]
 
 
 # with np.load('../dat/hyperparameters.npz', allow_pickle=True) as fh:
@@ -201,7 +201,9 @@ for it in range(n_coeffs):
 prior_mean = prior_mean[:, :len(knots)-n_ref]
 # -----------------------------------------------------------------------------
 # Solar modulation model
-mean_solar = 477.5
+# Check multimodal prior
+# Set higher (~600) to check for less variation
+mean_solar = 477.5  # 507.5
 sigma_solar = 191
 tau_solar = 25.6
 
@@ -264,48 +266,53 @@ chol_solar = np.linalg.cholesky(cov_solar+1e-6*np.eye(len(knots_solar)))[
 
 # -----------------------------------------------------------------------------
 # Data setup
-with np.load(
-    '../dat/rejection_list.npz',
-    allow_pickle=True,
-) as fh:
-    to_reject = fh['to_reject']
+# with np.load(
+#     '../dat/rejection_list.npz',
+#     allow_pickle=True,
+# ) as fh:
+#     to_reject = fh['to_reject']
+#
+# rawData = read_data(
+#     '../dat/archkalmag_data.csv',
+#     rejection_lists=to_reject[:, 0:3],
+# )
+# rawData = rawData.query("dt <= 100")
+# rawData = rawData.query(f'{t_min} <= t <= {t_max}')
+# # rawData = rawData.sample(n=1000, random_state=161)
+#
+# # UIDs of non-converging archeo times
+# rem_uids = [
+#     12064,  # Volcanic from central America, around 1000 BCE
+#     12065,  # Volcanic from central America, around 1000 BCE
+#     12066,  # Volcanic from central America, around 1000 BCE
+#     11064,  # Archeo from central America, around 1000 BCE
+#     10942,  # Archeo from central America, around 1000 BCE
+#     8568,   # Archeo from central America, around 1000 BCE
+#     11049,  # Archeo from central America, around 1000 BCE
+#     10962,  # Archeo from central America, around 1000 BCE
+#     10982,  # Archeo from central America, around 1000 BCE
+#     # 564,    # Hawaii
+#     # 8317,   # Seoul
+#     # 11402,  # Chuncheon, South Korea
+#     # 11035,  # Archeo from central America, 800 CE
+#     # 11071,  # Archeo from central America, 800 CE
+#     # 11034,  # Archeo from central America, 900 CE
+#     # 10926,  # Archeo from central America, 1100 CE
+#     # 12099,  # Archeo from Pau d'Alho Cave, Brazil 1189 CE
+# ]
+#
+# for rem in rem_uids:
+#     rawData.drop(
+#         index=rawData.query(f"UID == {rem}").index,
+#         inplace=True,
+#     )
+#
+# rawData.reset_index(inplace=True, drop=True)
 
-rawData = read_data(
-    '../dat/archkalmag_data.csv',
-    rejection_lists=to_reject[:, 0:3],
+rawData = read_csv(
+    '../dat/afm_9k2_data.csv',
 )
-rawData = rawData.query("dt <= 100")
-rawData = rawData.query(f'{t_min} <= t <= {t_max}')
-# rawData = rawData.sample(n=1000, random_state=161)
-
-# UIDs of non-converging archeo times
-rem_uids = [
-    12064,  # Volcanic from central America, around 1000 BCE
-    12065,  # Volcanic from central America, around 1000 BCE
-    12066,  # Volcanic from central America, around 1000 BCE
-    11064,  # Archeo from central America, around 1000 BCE
-    10942,  # Archeo from central America, around 1000 BCE
-    8568,   # Archeo from central America, around 1000 BCE
-    11049,  # Archeo from central America, around 1000 BCE
-    10962,  # Archeo from central America, around 1000 BCE
-    10982,  # Archeo from central America, around 1000 BCE
-    # 564,    # Hawaii
-    # 8317,   # Seoul
-    # 11402,  # Chuncheon, South Korea
-    # 11035,  # Archeo from central America, 800 CE
-    # 11071,  # Archeo from central America, 800 CE
-    # 11034,  # Archeo from central America, 900 CE
-    # 10926,  # Archeo from central America, 1100 CE
-    # 12099,  # Archeo from Pau d'Alho Cave, Brazil 1189 CE
-]
-
-for rem in rem_uids:
-    rawData.drop(
-        index=rawData.query(f"UID == {rem}").index,
-        inplace=True,
-    )
-
-rawData.reset_index(inplace=True, drop=True)
+rawData['FID'] = 'from Andreas'
 
 data = Data(rawData)
 
