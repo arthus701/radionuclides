@@ -310,7 +310,7 @@ chol_solar = np.linalg.cholesky(cov_solar+1e-6*np.eye(len(knots_solar)))[
 # rawData.reset_index(inplace=True, drop=True)
 
 rawData = read_csv(
-    '../dat/afm_9k2_data.csv',
+    '../dat/afm9k2_data.csv',
 )
 rawData['FID'] = 'from Andreas'
 
