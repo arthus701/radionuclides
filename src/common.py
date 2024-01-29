@@ -129,9 +129,12 @@ mcmc_params = {
 }
 
 # Other parameters
-tDir = (3.4 + 2) * 57.3 / 140   # Directional truncation error in Deg.
+# tDir = (3.4 + 2) * 57.3 / 140   # Directional truncation error in Deg.
 # tDir = 1.4                    # smaller value after investigation
-tInt = 2.                       # Intensity truncation error in uT
+# tInt = 2.                       # Intensity truncation error in uT
+# set to zero when using Andreas' dataset
+tDir = 0
+tInt = 0
 alpha_nu = 2.
 beta_nu = 0.1
 
