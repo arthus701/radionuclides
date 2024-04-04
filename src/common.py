@@ -124,7 +124,7 @@ step_solar = 22
 mcmc_params = {
     'n_samps': 500,
     'n_warmup': 1000,
-    'n_chains':  4,
+    'n_chains': 4,
     'target_accept': 0.95,
 }
 
@@ -261,6 +261,7 @@ prior_mean_solar = mean_solar + cor_obs @ _icov_obs @ \
     (ref_solar - mean_solar)
 cov_solar = cov_solar - cor_obs @ _icov_obs @ cor_obs.T
 
+# prior_mean_solar = np.ones(len(knots_solar)) * mean_solar
 prior_mean_solar = prior_mean_solar[:-n_ref_solar]
 chol_solar = np.linalg.cholesky(cov_solar+1e-6*np.eye(len(knots_solar)))[
     :-n_ref_solar,
