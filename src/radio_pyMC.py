@@ -156,19 +156,45 @@ with pm.Model() as mcModel:
 
     # -------------------------------------------------------------------------
     # Solar modulation
-    sm_cent = pm.Normal(
+    w_1 = 0.15
+    mu_1 = 315
+    si_1 = 70
+
+    w_2 = 1 - w_1
+    mu_2 = 600
+    si_2 = 130
+
+    mu_mix = w_1 * mu_1 + w_2 * mu_2
+    si_mix = np.sqrt(
+        w_1 * (mu_1**2 + si_1**2) + w_2 * (mu_2**2 + si_2**2)
+        - mu_mix**2
+    )
+
+    sm_cent = pm.NormalMixture(
         'sm_cent',
-        mu=0,
-        sigma=1,
+        w=[w_1, w_2],
+        mu=[(mu_1 - mu_mix) / si_mix, (mu_2 - mu_mix) / si_mix],
+        sigma=[si_1 / si_mix, si_2 / si_mix],
         size=(len(knots_solar)-n_ref_solar,),
     )
+
+    # sm_cent = pm.Normal(
+    #     'sm_cent',
+    #     mu=0,
+    #     sigma=1,
+    #     size=(len(knots_solar)-n_ref_solar,),
+    # )
+
     s_fac = pm.Normal(
         's_fac',
         sigma=1.,
         size=3,
     )
-
+    # correlated samples
     sm_at = chol_solar @ sm_cent + prior_mean_solar
+    # uniform correlated samples via cdf (normal w. prior mean and prior var)
+
+    # transform to correlated bimodal via inverse cdf
 
     sm_at_knots = pm.math.concatenate(
         (
@@ -276,4 +302,4 @@ if __name__ == '__main__':
         )
 
     # idata.to_netcdf('../dat/radio_result.nc')
-    idata.to_netcdf('../dat/radio_afm9k_result.nc')
+    idata.to_netcdf('../dat/radio_multimod_result.nc')
