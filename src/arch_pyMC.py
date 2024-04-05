@@ -157,4 +157,4 @@ if __name__ == '__main__':
             },
         )
 
-    idata.to_netcdf('../dat/arch_afm9k_result.nc')
+    idata.to_netcdf('../dat/arch_fdp2_afm9k_result.nc')

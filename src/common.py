@@ -63,45 +63,45 @@ lmax = 5
 
 # 2023-11-22
 # New parameters, estimated with cleaned dataset and gradients
-# dip = 3
-# R = 2800
-# gamma_0 = -32.79
-# alpha_dip = 39.60
-# omega = 1 / 153.08602220031185
-# xi = 1 / 48.71563374353433
-# chi = np.sqrt(xi**2 + omega**2)
-# alpha_wodip = 94.54
-# tau_wodip = 513.9
+dip = 3
+R = 2800
+gamma_0 = -32.79
+alpha_dip = 39.60
+omega = 1 / 153.08602220031185
+xi = 1 / 48.71563374353433
+chi = np.sqrt(xi**2 + omega**2)
+alpha_wodip = 94.54
+tau_wodip = 513.9
 
-# scl = np.flip(np.unique(scaling(R, REARTH, lmax)))
-# _alphas = np.ones(lmax) * alpha_wodip
-# _alphas *= scl
-# alpha_dip *= scl[0]
-# _taus = tau_wodip / (np.arange(lmax)+1)
+scl = np.flip(np.unique(scaling(R, REARTH, lmax)))
+_alphas = np.ones(lmax) * alpha_wodip
+_alphas *= scl
+alpha_dip *= scl[0]
+_taus = tau_wodip / (np.arange(lmax)+1)
 
 # 2023-09-13
 # Try two parameter axial dipole, pfm9k.2 parameters
-dip = 1
-R = REARTH
-gamma_0 = -32.5
-alpha_dip = 10
-omega = 1/741
-chi = 1/138
-xi = np.sqrt(chi**2 - omega**2)
-_alphas = [
-    3.5,
-    1.765,
-    1.011,
-    0.455,
-    0.177,
-]
-_taus = [
-    200,
-    133,
-    174,
-    137,
-    95,
-]
+# dip = 1
+# R = REARTH
+# gamma_0 = -32.5
+# alpha_dip = 10
+# omega = 1/741
+# chi = 1/138
+# xi = np.sqrt(chi**2 - omega**2)
+# _alphas = [
+#     3.5,
+#     1.765,
+#     1.011,
+#     0.455,
+#     0.177,
+# ]
+# _taus = [
+#     200,
+#     133,
+#     174,
+#     137,
+#     95,
+# ]
 
 
 # with np.load('../dat/hyperparameters.npz', allow_pickle=True) as fh:
