@@ -2,7 +2,7 @@
 """
 
 import numpy as np
-from pandas import read_table, cut, read_csv
+from pandas import read_table, cut  # , read_csv
 
 from scipy.signal import butter, sosfiltfilt
 
@@ -129,12 +129,12 @@ mcmc_params = {
 }
 
 # Other parameters
-# tDir = (3.4 + 2) * 57.3 / 140   # Directional truncation error in Deg.
+tDir = (3.4 + 2) * 57.3 / 140   # Directional truncation error in Deg.
 # tDir = 1.4                    # smaller value after investigation
-# tInt = 2.                       # Intensity truncation error in uT
+tInt = 2.                       # Intensity truncation error in uT
 # set to zero when using Andreas' dataset
-tDir = 0
-tInt = 0
+# tDir = 0
+# tInt = 0
 alpha_nu = 2.
 beta_nu = 0.1
 
@@ -270,53 +270,53 @@ chol_solar = np.linalg.cholesky(cov_solar+1e-6*np.eye(len(knots_solar)))[
 
 # -----------------------------------------------------------------------------
 # Data setup
-# with np.load(
-#     '../dat/rejection_list.npz',
-#     allow_pickle=True,
-# ) as fh:
-#     to_reject = fh['to_reject']
-#
-# rawData = read_data(
-#     '../dat/archkalmag_data.csv',
-#     rejection_lists=to_reject[:, 0:3],
-# )
-# rawData = rawData.query("dt <= 100")
-# rawData = rawData.query(f'{t_min} <= t <= {t_max}')
-# # rawData = rawData.sample(n=1000, random_state=161)
-#
-# # UIDs of non-converging archeo times
-# rem_uids = [
-#     12064,  # Volcanic from central America, around 1000 BCE
-#     12065,  # Volcanic from central America, around 1000 BCE
-#     12066,  # Volcanic from central America, around 1000 BCE
-#     11064,  # Archeo from central America, around 1000 BCE
-#     10942,  # Archeo from central America, around 1000 BCE
-#     8568,   # Archeo from central America, around 1000 BCE
-#     11049,  # Archeo from central America, around 1000 BCE
-#     10962,  # Archeo from central America, around 1000 BCE
-#     10982,  # Archeo from central America, around 1000 BCE
-#     # 564,    # Hawaii
-#     # 8317,   # Seoul
-#     # 11402,  # Chuncheon, South Korea
-#     # 11035,  # Archeo from central America, 800 CE
-#     # 11071,  # Archeo from central America, 800 CE
-#     # 11034,  # Archeo from central America, 900 CE
-#     # 10926,  # Archeo from central America, 1100 CE
-#     # 12099,  # Archeo from Pau d'Alho Cave, Brazil 1189 CE
-# ]
-#
-# for rem in rem_uids:
-#     rawData.drop(
-#         index=rawData.query(f"UID == {rem}").index,
-#         inplace=True,
-#     )
-#
-# rawData.reset_index(inplace=True, drop=True)
+with np.load(
+    '../dat/rejection_list.npz',
+    allow_pickle=True,
+) as fh:
+    to_reject = fh['to_reject']
 
-rawData = read_csv(
-    '../dat/afm9k2_data.csv',
+rawData = read_data(
+    '../dat/archkalmag_data.csv',
+    rejection_lists=to_reject[:, 0:3],
 )
-rawData['FID'] = 'from Andreas'
+rawData = rawData.query("dt <= 100")
+rawData = rawData.query(f'{t_min} <= t <= {t_max}')
+# rawData = rawData.sample(n=1000, random_state=161)
+
+# UIDs of non-converging archeo times
+rem_uids = [
+    12064,  # Volcanic from central America, around 1000 BCE
+    12065,  # Volcanic from central America, around 1000 BCE
+    12066,  # Volcanic from central America, around 1000 BCE
+    11064,  # Archeo from central America, around 1000 BCE
+    10942,  # Archeo from central America, around 1000 BCE
+    8568,   # Archeo from central America, around 1000 BCE
+    11049,  # Archeo from central America, around 1000 BCE
+    10962,  # Archeo from central America, around 1000 BCE
+    10982,  # Archeo from central America, around 1000 BCE
+    # 564,    # Hawaii
+    # 8317,   # Seoul
+    # 11402,  # Chuncheon, South Korea
+    # 11035,  # Archeo from central America, 800 CE
+    # 11071,  # Archeo from central America, 800 CE
+    # 11034,  # Archeo from central America, 900 CE
+    # 10926,  # Archeo from central America, 1100 CE
+    # 12099,  # Archeo from Pau d'Alho Cave, Brazil 1189 CE
+]
+
+for rem in rem_uids:
+    rawData.drop(
+        index=rawData.query(f"UID == {rem}").index,
+        inplace=True,
+    )
+
+rawData.reset_index(inplace=True, drop=True)
+
+# rawData = read_csv(
+#     '../dat/afm9k2_data.csv',
+# )
+# rawData['FID'] = 'from Andreas'
 
 data = Data(rawData)
 
