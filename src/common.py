@@ -311,6 +311,29 @@ for rem in rem_uids:
         inplace=True,
     )
 
+# There's a mistake in GEOMAGIA. Several records from Ecuador are reported with
+# the wrong age, BP was confused with BCE.
+# https://doi.org/10.1016/j.jsames.2020.102733
+age_fix_uids = [
+    13229,
+    13230,
+    13231,
+    13232,
+    13234,
+    13235,
+    13236,
+    13237,
+    13238,
+    13239,
+    13240,
+    13241,
+    13242,
+    13243,
+]
+for age_fix in age_fix_uids:
+    idx = rawData.query(f"UID == {age_fix}").index
+    rawData.loc[idx, 't'] = 1950 + rawData.loc[idx, 't']
+
 rawData.reset_index(inplace=True, drop=True)
 
 # rawData = read_csv(
