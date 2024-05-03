@@ -45,7 +45,7 @@ coeffs = np.hstack(
     )
 )
 
-if prefix == 'arch':
+if 'arch' in prefix:
     np.savez(
         f'../dat/{prefix}_ensemble.npz',
         knots=knots,
