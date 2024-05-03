@@ -11,7 +11,7 @@ from paleokalmag.data_handling import read_data, Data
 
 from pymagglobal.utils import REARTH, lmax2N, i2lm_l, scaling
 
-from utils import sqe_kernel
+from utils import matern_kernel
 
 
 def butter_lowpass_filter(data, cutoff, fs, order=5):
@@ -239,18 +239,18 @@ t_const = min(ref_solar_years)
 ind_const = np.argmax(t_const <= knots_solar)
 n_ref_solar = len(knots_solar) - ind_const
 
-cov_obs = sqe_kernel(
+cov_obs = matern_kernel(
     ref_solar_years,
     tau=tau_solar,
     sigma=sigma_solar,
 )
-cor_obs = sqe_kernel(
+cor_obs = matern_kernel(
     knots_solar,
     ref_solar_years,
     tau=tau_solar,
     sigma=sigma_solar,
 )
-cov_solar = sqe_kernel(
+cov_solar = matern_kernel(
     knots_solar,
     sigma=sigma_solar,
     tau=tau_solar,
@@ -283,6 +283,9 @@ rawData = read_data(
 rawData = rawData.query("dt <= 100")
 rawData = rawData.query(f'{t_min} <= t <= {t_max}')
 # rawData = rawData.sample(n=1000, random_state=161)
+# Test minimal errors.
+# rawData['dD'].where(rawData['dD'] > 10, other=10, inplace=True)
+
 
 # UIDs of non-converging archeo times
 rem_uids = [
