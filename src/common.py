@@ -2,14 +2,14 @@
 """
 
 import numpy as np
-from pandas import read_table, cut  # , read_csv
+from pandas import read_table, cut, read_csv
 
 from scipy.signal import butter, sosfiltfilt
 
 from paleokalmag.utils import dsh_basis
 from paleokalmag.data_handling import read_data, Data
 
-from pymagglobal.utils import REARTH, lmax2N, i2lm_l, scaling
+from pymagglobal.utils import REARTH, lmax2N, i2lm_l    # , scaling
 
 from utils import matern_kernel
 
@@ -129,12 +129,12 @@ mcmc_params = {
 }
 
 # Other parameters
-tDir = (3.4 + 2) * 57.3 / 140   # Directional truncation error in Deg.
+# tDir = (3.4 + 2) * 57.3 / 140   # Directional truncation error in Deg.
 # tDir = 1.4                    # smaller value after investigation
-tInt = 2.                       # Intensity truncation error in uT
+# tInt = 2.                       # Intensity truncation error in uT
 # set to zero when using Andreas' dataset
-# tDir = 0
-# tInt = 0
+tDir = 0
+tInt = 0
 alpha_nu = 2.
 beta_nu = 0.1
 
@@ -270,18 +270,18 @@ chol_solar = np.linalg.cholesky(cov_solar+1e-6*np.eye(len(knots_solar)))[
 
 # -----------------------------------------------------------------------------
 # Data setup
-with np.load(
-    '../dat/rejection_list.npz',
-    allow_pickle=True,
-) as fh:
-    to_reject = fh['to_reject']
-
-rawData = read_data(
-    '../dat/archkalmag_data.csv',
-    rejection_lists=to_reject[:, 0:3],
-)
-rawData = rawData.query("dt <= 100")
-rawData = rawData.query(f'{t_min} <= t <= {t_max}')
+# with np.load(
+#     '../dat/rejection_list.npz',
+#     allow_pickle=True,
+# ) as fh:
+#     to_reject = fh['to_reject']
+#
+# rawData = read_data(
+#     '../dat/archkalmag_data.csv',
+#     rejection_lists=to_reject[:, 0:3],
+# )
+# rawData = rawData.query("dt <= 100")
+# rawData = rawData.query(f'{t_min} <= t <= {t_max}')
 # rawData = rawData.sample(n=1000, random_state=161)
 # Test minimal errors.
 # rawData['dD'].where(rawData['dD'] > 10, other=10, inplace=True)
@@ -308,11 +308,11 @@ rem_uids = [
     # 12099,  # Archeo from Pau d'Alho Cave, Brazil 1189 CE
 ]
 
-for rem in rem_uids:
-    rawData.drop(
-        index=rawData.query(f"UID == {rem}").index,
-        inplace=True,
-    )
+# for rem in rem_uids:
+#     rawData.drop(
+#         index=rawData.query(f"UID == {rem}").index,
+#         inplace=True,
+#     )
 
 # There's a mistake in GEOMAGIA. Several records from Ecuador are reported with
 # the wrong age, BP was confused with BCE.
@@ -333,16 +333,16 @@ age_fix_uids = [
     13242,
     13243,
 ]
-for age_fix in age_fix_uids:
-    idx = rawData.query(f"UID == {age_fix}").index
-    rawData.loc[idx, 't'] = 1950 + rawData.loc[idx, 't']
+# for age_fix in age_fix_uids:
+#     idx = rawData.query(f"UID == {age_fix}").index
+#     rawData.loc[idx, 't'] = 1950 + rawData.loc[idx, 't']
+#
+# rawData.reset_index(inplace=True, drop=True)
 
-rawData.reset_index(inplace=True, drop=True)
-
-# rawData = read_csv(
-#     '../dat/afm9k2_data.csv',
-# )
-# rawData['FID'] = 'from Andreas'
+rawData = read_csv(
+    '../dat/afm9k2_data.csv',
+)
+rawData['FID'] = 'from Andreas'
 
 data = Data(rawData)
 
