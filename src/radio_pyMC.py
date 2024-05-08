@@ -25,6 +25,7 @@ from common import (
     alpha_nu,
     beta_nu,
     mean_solar,
+    sigma_solar,
     knots_solar,
     n_ref_solar,
     ref_solar,
@@ -156,28 +157,6 @@ with pm.Model() as mcModel:
 
     # -------------------------------------------------------------------------
     # Solar modulation
-    # w_1 = 0.15
-    # mu_1 = 315
-    # si_1 = 70
-    #
-    # w_2 = 1 - w_1
-    # mu_2 = 600
-    # si_2 = 130
-    #
-    # mu_mix = w_1 * mu_1 + w_2 * mu_2
-    # si_mix = np.sqrt(
-    #     w_1 * (mu_1**2 + si_1**2) + w_2 * (mu_2**2 + si_2**2)
-    #     - mu_mix**2
-    # )
-    #
-    # sm_cent = pm.NormalMixture(
-    #     'sm_cent',
-    #     w=[w_1, w_2],
-    #     mu=[(mu_1 - mu_mix) / si_mix, (mu_2 - mu_mix) / si_mix],
-    #     sigma=[si_1 / si_mix, si_2 / si_mix],
-    #     size=(len(knots_solar)-n_ref_solar,),
-    # )
-
     sm_cent = pm.Normal(
         'sm_cent',
         mu=0,
@@ -193,8 +172,68 @@ with pm.Model() as mcModel:
     # correlated samples
     sm_at = chol_solar @ sm_cent + prior_mean_solar
     # uniform correlated samples via cdf (normal w. prior mean and prior var)
+    sm_at -= mean_solar
+    sm_at /= sigma_solar
+    sm_at_uniform = pt.exp(
+        pm.logcdf(
+            pm.Normal.dist(
+                mu=0.,
+                sigma=1.,
+            ),
+            sm_at,
+        )
+    )
+    kappa = pm.Beta(
+        'Kappa',
+        alpha=1.,
+        beta=7.,
+
+    )
+    tL = pm.Normal(
+        'tL',
+        mu=0.,
+        sigma=200.,
+    )
+    tU = pm.Normal(
+        'tU',
+        mu=1000.,
+        sigma=200.,
+    )
+
+    alpha = np.array(
+        [
+            0.25, 2.5,
+        ]
+    )
+    beta = np.array(
+        [
+            0.25, 10.,
+        ]
+    )
 
     # transform to correlated bimodal via inverse cdf
+    sm_at_bimod = (
+        tL + (tU-tL) * (
+            (1 - kappa) * pt.exp(
+                pm.logcdf(
+                    pm.Beta.dist(
+                        alpha=alpha[0],
+                        beta=beta[0],
+                    ),
+                    sm_at_uniform,
+                )
+            )
+            + kappa * pt.exp(
+                pm.logcdf(
+                    pm.Beta.dist(
+                        alpha=alpha[1],
+                        beta=beta[1],
+                    ),
+                    sm_at_uniform,
+                )
+            )
+        )
+    )
 
     sm_at_knots = pm.math.concatenate(
         (
@@ -302,4 +341,4 @@ if __name__ == '__main__':
         )
 
     # idata.to_netcdf('../dat/radio_result.nc')
-    idata.to_netcdf('../dat/radio_multimod_result.nc')
+    idata.to_netcdf('../dat/radio_bimodal_result.nc')
