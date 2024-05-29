@@ -171,6 +171,7 @@ with pm.Model() as mcModel:
     )
     # correlated samples
     sm_at = chol_solar @ sm_cent + prior_mean_solar
+
     # uniform correlated samples via cdf (normal w. prior mean and prior var)
     sm_at -= mean_solar
     sm_at /= sigma_solar
@@ -183,15 +184,16 @@ with pm.Model() as mcModel:
             sm_at,
         )
     )
+
+    # transform to correlated bimodal via inverse cdf
     kappa = pm.Beta(
         'Kappa',
         alpha=1.,
         beta=7.,
 
     )
-    tL = pm.Normal(
+    tL = pm.HalfNormal(
         'tL',
-        mu=0.,
         sigma=200.,
     )
     tU = pm.Normal(
@@ -211,7 +213,6 @@ with pm.Model() as mcModel:
         ]
     )
 
-    # transform to correlated bimodal via inverse cdf
     sm_at_bimod = (
         tL + (tU-tL) * (
             (1 - kappa) * pt.exp(
@@ -237,7 +238,7 @@ with pm.Model() as mcModel:
 
     sm_at_knots = pm.math.concatenate(
         (
-            sm_at,
+            sm_at_bimod,
             ref_solar,
         ),
     )
