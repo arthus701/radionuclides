@@ -336,7 +336,6 @@ if __name__ == '__main__':
             target_accept=mcmc_params['target_accept'],
             postprocessing_backend='cpu',
             nuts_kwargs={
-                # 'dense_mass': [('betas'), ('NEZ_residual'), ('t_cent')],
                 # 'init_strategy': init_to_median,
             },
         )
