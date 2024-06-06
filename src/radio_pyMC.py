@@ -190,50 +190,49 @@ with pm.Model() as mcModel:
         'Kappa',
         alpha=1.,
         beta=7.,
-
-    )
-    tL = pm.HalfNormal(
-        'tL',
-        sigma=200.,
-    )
-    tU = pm.Normal(
-        'tU',
-        mu=1000.,
-        sigma=200.,
     )
 
-    alpha = np.array(
-        [
-            0.25, 2.5,
-        ]
-    )
-    beta = np.array(
-        [
-            0.25, 10.,
-        ]
+    solar_pri_mu_1 = pm.Normal(
+        'solar_prior_mu_1',
+        mu=500,
+        sigma=100,
     )
 
-    sm_at_bimod = (
-        tL + (tU-tL) * (
-            (1 - kappa) * pt.exp(
-                pm.logcdf(
-                    pm.Beta.dist(
-                        alpha=alpha[0],
-                        beta=beta[0],
-                    ),
-                    sm_at_uniform,
-                )
-            )
-            + kappa * pt.exp(
-                pm.logcdf(
-                    pm.Beta.dist(
-                        alpha=alpha[1],
-                        beta=beta[1],
-                    ),
-                    sm_at_uniform,
-                )
-            )
-        )
+    solar_pri_mu_2 = pm.Normal(
+        'solar_prior_mu_2',
+        mu=300,
+        sigma=100,
+    )
+
+    solar_pri_sigmas = pm.Gamma(
+        'solar_prior_sigmas',
+        mu=100,
+        sigma=100,
+        size=2,
+    )
+
+    mixture = pm.NormalMixture(
+        'prior',
+        w=[1-kappa, kappa],
+        mu=[solar_pri_mu_1, solar_pri_mu_2],
+        sigma=solar_pri_sigmas,
+    )
+
+    cdf = pt.as_tensor(np.linspace(0, 1000, 201))
+
+    input_approx = pt.exp(
+        pm.logcdf(
+            mixture,
+            cdf,
+        ),
+    )
+    input_approx -= input_approx[0]
+    input_approx /= input_approx[-1]
+
+    sm_at_bimod = interp1d(
+        sm_at_uniform,
+        input_approx,
+        cdf,
     )
 
     sm_at_knots = pm.math.concatenate(
