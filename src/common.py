@@ -212,7 +212,7 @@ tau_solar = 25.6
 
 solar_constr = read_table(
     '../dat/US10_phi_mon_tab_230907.txt',
-    delim_whitespace=True,
+    sep='\s+',
     skiprows=23,
     header=None,
     dtype=float,
