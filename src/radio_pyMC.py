@@ -187,7 +187,7 @@ with pm.Model() as mcModel:
 
     # transform to correlated bimodal via inverse cdf
     kappa = pm.Beta(
-        'Kappa',
+        'kappa',
         alpha=1.,
         beta=7.,
     )
@@ -218,7 +218,7 @@ with pm.Model() as mcModel:
         sigma=solar_pri_sigmas,
     )
 
-    cdf = pt.as_tensor(np.linspace(0, 1000, 201))
+    cdf = pt.as_tensor(np.linspace(0, 1500, 2001))
 
     input_approx = pt.exp(
         pm.logcdf(
@@ -235,10 +235,25 @@ with pm.Model() as mcModel:
         cdf,
     )
 
-    sm_at_knots = pm.math.concatenate(
-        (
-            sm_at_bimod,
-            ref_solar,
+    # constraint = 0 <= sm_at_bimod
+    # potential = pm.Potential(
+    #     'x_constraint',
+    #     pm.math.log(
+    #         pm.math.switch(
+    #             constraint,
+    #             1,
+    #             0,
+    #         )
+    #     )
+    # )
+
+    sm_at_knots = pm.Deterministic(
+        'sm_at_knots',
+        pm.math.concatenate(
+            (
+                sm_at_bimod,
+                ref_solar,
+            ),
         ),
     )
 
@@ -323,7 +338,7 @@ with pm.Model() as mcModel:
 if __name__ == '__main__':
     from common import mcmc_params
     from pymc.sampling import jax as pmj
-    # from numpyro.infer.initialization import init_to_median
+    from numpyro.infer.initialization import init_to_mean
 
     with mcModel:
         idata = pmj.sample_numpyro_nuts(
@@ -335,7 +350,7 @@ if __name__ == '__main__':
             target_accept=mcmc_params['target_accept'],
             postprocessing_backend='cpu',
             nuts_kwargs={
-                # 'init_strategy': init_to_median,
+                'init_strategy': init_to_mean,
             },
         )
 
