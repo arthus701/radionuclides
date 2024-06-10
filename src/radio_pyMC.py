@@ -195,7 +195,7 @@ with pm.Model() as mcModel:
         'tL',
         sigma=200.,
     )
-    tU = pm.Normal(
+    tR = pm.Normal(
         'tU',
         mu=1000.,
         sigma=200.,
@@ -215,7 +215,7 @@ with pm.Model() as mcModel:
     cdf = pt.as_tensor(np.linspace(0, 1500, 2001))
 
     input_approx = (
-        tL + (tU-tL) * (
+        tL + tR * (
             (1 - kappa) * pt.exp(
                 pm.logcdf(
                     pm.Beta.dist(
