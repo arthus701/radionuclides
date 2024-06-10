@@ -212,9 +212,9 @@ with pm.Model() as mcModel:
         ]
     )
 
-    cdf = pt.as_tensor(np.linspace(0, 1500, 2001))
+    cdf = pt.as_tensor(np.linspace(0, 1, 2001))
 
-    input_approx = (
+    inverse_approx = (
         tL + tR * (
             (1 - kappa) * pt.exp(
                 pm.logcdf(
@@ -237,13 +237,10 @@ with pm.Model() as mcModel:
         )
     )
 
-    input_approx -= input_approx[0]
-    input_approx /= input_approx[-1]
-
     sm_at_bimod = interp1d(
         sm_at_uniform,
-        input_approx,
         cdf,
+        inverse_approx,
     )
 
     sm_at_knots = pm.Deterministic(
