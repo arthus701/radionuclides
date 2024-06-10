@@ -191,41 +191,52 @@ with pm.Model() as mcModel:
         alpha=1.,
         beta=7.,
     )
-
-    solar_pri_mu_1 = pm.Normal(
-        'solar_prior_mu_1',
-        mu=500,
-        sigma=100,
+    tL = pm.HalfNormal(
+        'tL',
+        sigma=200.,
+    )
+    tU = pm.Normal(
+        'tU',
+        mu=1000.,
+        sigma=200.,
     )
 
-    solar_pri_mu_2 = pm.Normal(
-        'solar_prior_mu_2',
-        mu=300,
-        sigma=100,
+    alpha = np.array(
+        [
+            0.25, 2.5,
+        ]
     )
-
-    solar_pri_sigmas = pm.Gamma(
-        'solar_prior_sigmas',
-        mu=100,
-        sigma=100,
-        size=2,
-    )
-
-    mixture = pm.NormalMixture(
-        'prior',
-        w=[1-kappa, kappa],
-        mu=[solar_pri_mu_1, solar_pri_mu_2],
-        sigma=solar_pri_sigmas,
+    beta = np.array(
+        [
+            0.25, 10.,
+        ]
     )
 
     cdf = pt.as_tensor(np.linspace(0, 1500, 2001))
 
-    input_approx = pt.exp(
-        pm.logcdf(
-            mixture,
-            cdf,
-        ),
+    input_approx = (
+        tL + (tU-tL) * (
+            (1 - kappa) * pt.exp(
+                pm.logcdf(
+                    pm.Beta.dist(
+                        alpha=alpha[0],
+                        beta=beta[0],
+                    ),
+                    cdf,
+                )
+            )
+            + kappa * pt.exp(
+                pm.logcdf(
+                    pm.Beta.dist(
+                        alpha=alpha[1],
+                        beta=beta[1],
+                    ),
+                    cdf,
+                )
+            )
+        )
     )
+
     input_approx -= input_approx[0]
     input_approx /= input_approx[-1]
 
@@ -234,18 +245,6 @@ with pm.Model() as mcModel:
         input_approx,
         cdf,
     )
-
-    # constraint = 0 <= sm_at_bimod
-    # potential = pm.Potential(
-    #     'x_constraint',
-    #     pm.math.log(
-    #         pm.math.switch(
-    #             constraint,
-    #             1,
-    #             0,
-    #         )
-    #     )
-    # )
 
     sm_at_knots = pm.Deterministic(
         'sm_at_knots',
