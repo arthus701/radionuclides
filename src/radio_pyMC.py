@@ -195,10 +195,11 @@ with pm.Model() as mcModel:
         'tL',
         sigma=200.,
     )
-    tR = pm.Normal(
+    tR = pm.TruncatedNormal(
         'tU',
         mu=1000.,
         sigma=200.,
+        lower=0.,
     )
 
     alpha = np.array(
