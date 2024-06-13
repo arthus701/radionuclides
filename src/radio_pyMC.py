@@ -189,21 +189,9 @@ with pm.Model() as mcModel:
     )
 
     # transform to correlated bimodal via inverse cdf
-    kappa = pm.Beta(
-        'kappa',
-        alpha=1.,
-        beta=7.,
-    )
-    tL = pm.HalfNormal(
-        'tL',
-        sigma=200.,
-    )
-    tR = pm.TruncatedNormal(
-        'tR',
-        mu=1000.,
-        sigma=200.,
-        lower=0.,
-    )
+    kappa = 0.13
+    tL = 144
+    tR = 746
 
     alpha = np.array(
         [
@@ -355,4 +343,4 @@ if __name__ == '__main__':
         )
 
     # idata.to_netcdf('../dat/radio_result.nc')
-    idata.to_netcdf('../dat/radio_bimodal_result.nc')
+    idata.to_netcdf('../dat/radio_bimodal_fixed_result.nc')
