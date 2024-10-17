@@ -170,7 +170,7 @@ with pm.Model() as mcModel:
     s_fac = pm.Normal(
         's_fac',
         sigma=1.,
-        size=3,
+        size=(1,),
     )
     # correlated samples
     sm_at = chol_solar @ sm_cent + prior_mean_solar
@@ -284,9 +284,9 @@ with pm.Model() as mcModel:
     q_C14_cal = prod_C14(fac*abs(gamma_0), mean_solar)
 
     # XXX Parametrize the 0.1
-    cal_nh = q_GL_cal * (1 + s_fac[0]*0.05)
-    cal_sh = q_GL_cal * (1 + s_fac[1]*0.05)
-    cal_c14 = q_C14_cal * (1 + s_fac[2]*0.05)
+    cal_nh = q_GL_cal   # * (1 + s_fac[0]*0.05)
+    cal_sh = q_GL_cal   # * (1 + s_fac[1]*0.05)
+    cal_c14 = q_C14_cal * (1 + s_fac[0]*0.05)
 
     # XXX Estimate error levels?
     rNH = pm.Deterministic(
