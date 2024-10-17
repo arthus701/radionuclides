@@ -355,4 +355,4 @@ if __name__ == '__main__':
         )
 
     # idata.to_netcdf('../dat/radio_result.nc')
-    idata.to_netcdf('../dat/radio_bimodal_result.nc')
+    idata.to_netcdf('../dat/radio_bimodal_calib_fix_result.nc')
