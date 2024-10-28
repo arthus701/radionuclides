@@ -377,4 +377,4 @@ if __name__ == '__main__':
         )
 
     # idata.to_netcdf('../dat/radio_result.nc')
-    idata.to_netcdf('../dat/radio_bimodal_result.nc')
+    idata.to_netcdf('../dat/radio_bimodal_longterm_500_result.nc')
