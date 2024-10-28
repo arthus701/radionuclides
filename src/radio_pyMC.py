@@ -30,6 +30,7 @@ from common import (
     n_ref_solar,
     ref_solar,
     chol_solar,
+    chol_solar_longterm,
     prior_mean_solar,
     radData,
     idx_GL,
@@ -194,10 +195,11 @@ with pm.Model() as mcModel:
         alpha=1.,
         beta=7.,
     )
-    tL = pm.HalfNormal(
-        'tL',
-        sigma=200.,
+    tL_cent = pm.HalfNormal(
+        'tL_cent',
+        sigma=1.,
     )
+    tL = 200 * tL_cent + 150
     tR = pm.TruncatedNormal(
         'tR',
         mu=1000.,
@@ -247,11 +249,31 @@ with pm.Model() as mcModel:
         inverse_approx,
     )
 
+    # add longterm component
+    sm_cent_longterm = pm.Normal(
+        'sm_cent_longterm',
+        mu=0,
+        sigma=1,
+        size=(len(knots_solar)-n_ref_solar,),
+    )
+    sm_at_longterm = chol_solar_longterm @ sm_cent_longterm
+    sm_at_both = sm_at_bimod + sm_at_longterm
+
+    # penalize smaller than zero
+    zero_bound = pm.math.sum(
+        pm.math.log(
+            pm.math.sigmoid(
+                10 * sm_at_both
+            )
+        )
+    )
+    pm.Potential('zero_bound', zero_bound)
+
     sm_at_knots = pm.Deterministic(
         'sm_at_knots',
         pm.math.concatenate(
             (
-                sm_at_bimod,
+                sm_at_both,
                 ref_solar,
             ),
         ),

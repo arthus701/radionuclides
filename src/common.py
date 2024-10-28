@@ -209,6 +209,8 @@ prior_mean = prior_mean[:, :len(knots)-n_ref]
 mean_solar = 477.5
 sigma_solar = 191
 tau_solar = 25.6
+sigma_solar_longterm = 200
+tau_solar_longterm = 500
 
 solar_constr = read_table(
     '../dat/US10_phi_mon_tab_230907.txt',
@@ -264,6 +266,18 @@ cov_solar = cov_solar - cor_obs @ _icov_obs @ cor_obs.T
 # prior_mean_solar = np.ones(len(knots_solar)) * mean_solar
 prior_mean_solar = prior_mean_solar[:-n_ref_solar]
 chol_solar = np.linalg.cholesky(cov_solar+1e-6*np.eye(len(knots_solar)))[
+    :-n_ref_solar,
+    :-n_ref_solar,
+]
+
+cov_solar_longterm = matern_kernel(
+    knots_solar,
+    sigma=sigma_solar_longterm,
+    tau=tau_solar_longterm,
+)
+chol_solar_longterm = np.linalg.cholesky(
+    cov_solar_longterm+1e-6*np.eye(len(knots_solar))
+)[
     :-n_ref_solar,
     :-n_ref_solar,
 ]
