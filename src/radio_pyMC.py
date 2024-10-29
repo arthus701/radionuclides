@@ -199,7 +199,7 @@ with pm.Model() as mcModel:
         'tL_cent',
         sigma=1.,
     )
-    tL = 200 * tL_cent + 150
+    tL = 200 * tL_cent
     tR = pm.TruncatedNormal(
         'tR',
         mu=1000.,
@@ -263,7 +263,7 @@ with pm.Model() as mcModel:
     zero_bound = pm.math.sum(
         pm.math.log(
             pm.math.sigmoid(
-                1e-2 * sm_at_both
+                1e-2 * (sm_at_both - 150)
             )
         )
     )
