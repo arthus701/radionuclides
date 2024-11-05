@@ -209,7 +209,7 @@ prior_mean = prior_mean[:, :len(knots)-n_ref]
 mean_solar = 477.5
 sigma_solar = 191
 tau_solar = 25.6
-sigma_solar_longterm = 200
+sigma_solar_longterm = 1
 tau_solar_longterm = 500
 
 solar_constr = read_table(

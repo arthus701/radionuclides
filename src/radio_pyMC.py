@@ -256,7 +256,13 @@ with pm.Model() as mcModel:
         sigma=1,
         size=(len(knots_solar)-n_ref_solar,),
     )
-    sm_at_longterm = chol_solar_longterm @ sm_cent_longterm
+    sm_longterm_scale = pm.Gamma(
+        'sm_longterm_scale',
+        alpha=3,
+        beta=3/200,
+        size=1,
+    )
+    sm_at_longterm = sm_longterm_scale * chol_solar_longterm @ sm_cent_longterm
     sm_at_both = sm_at_bimod + sm_at_longterm
 
     # penalize smaller than zero
