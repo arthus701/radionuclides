@@ -160,4 +160,4 @@ if __name__ == '__main__':
             },
         )
 
-    idata.to_netcdf('../out/arch_pfm_max_result.nc')
+    idata.to_netcdf('../out/arch_result.nc')
