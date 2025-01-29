@@ -53,9 +53,12 @@ with pm.Model() as mcModel:
 
     gs_at = pt.batched_dot(chol, g_cent) + prior_mean
 
-    gs_at_knots = pt.horizontal_stack(
-        gs_at,
-        ref_coeffs,
+    gs_at_knots = pm.Deterministic(
+        'gs_at_knots',
+        pt.horizontal_stack(
+            gs_at,
+            ref_coeffs,
+        ),
     )
 
     gs = interp(
