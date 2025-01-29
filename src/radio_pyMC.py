@@ -22,8 +22,8 @@ from common import (
     idx_F,
     tDir,
     tInt,
-    alpha_nu,
-    beta_nu,
+    # alpha_nu,
+    # beta_nu,
     mean_solar,
     sigma_solar,
     knots_solar,
@@ -49,12 +49,12 @@ fac = 0.63712**3
 with pm.Model() as mcModel:
     # -------------------------------------------------------------------------
     # Archeomag
-    nus = pm.Gamma(
-        'nu',
-        alpha=alpha_nu,
-        beta=beta_nu,
-        size=3,
-    )
+    # nus = pm.Gamma(
+    #     'nu',
+    #     alpha=alpha_nu,
+    #     beta=beta_nu,
+    #     size=3,
+    # )
 
     t_cent = pm.Normal(
         't_cent',
@@ -137,7 +137,8 @@ with pm.Model() as mcModel:
 
     rD_obs = pm.StudentT(
         'd_obs',
-        nu=1 + nus[0],
+        # nu=1 + nus[0],
+        nu=4,
         mu=rD,
         sigma=1.,
         observed=np.zeros(len(idx_D)),
@@ -145,7 +146,8 @@ with pm.Model() as mcModel:
 
     rI_obs = pm.StudentT(
         'i_obs',
-        nu=1 + nus[1],
+        # nu=1 + nus[1],
+        nu=4,
         mu=rI,
         sigma=1.,
         observed=np.zeros(len(idx_I)),
@@ -153,7 +155,8 @@ with pm.Model() as mcModel:
 
     rF_obs = pm.StudentT(
         'f_obs',
-        nu=1 + nus[2],
+        # nu=1 + nus[2],
+        nu=4,
         mu=rF,
         sigma=1.,
         observed=np.zeros(len(idx_F)),
@@ -382,5 +385,5 @@ if __name__ == '__main__':
             },
         )
 
-    # idata.to_netcdf('../dat/radio_result.nc')
-    idata.to_netcdf('../dat/radio_bimodal_longterm_500_result.nc')
+    # idata.to_netcdf('../out/radio_result.nc')
+    idata.to_netcdf('../out/radio_longterm_500_result.nc')
