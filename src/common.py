@@ -254,8 +254,8 @@ cor_obs = matern_kernel(
 )
 cov_solar = matern_kernel(
     knots_solar,
-    sigma=sigma_solar,
     tau=tau_solar,
+    sigma=sigma_solar,
 )
 
 _icov_obs = np.linalg.inv(cov_obs + 1e-4*np.eye(len(ref_solar_years)))
