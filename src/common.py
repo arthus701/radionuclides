@@ -207,7 +207,7 @@ prior_mean = prior_mean[:, :len(knots)-n_ref]
 # Solar modulation model
 # Check multimodal prior
 # Set higher (~600) to check for less variation
-mean_solar = 477.5
+mean_solar = 550
 sigma_solar = 191
 tau_solar = 25.6
 sigma_solar_longterm = 1
