@@ -7,7 +7,8 @@ from pandas import read_table, cut, read_csv
 from scipy.signal import butter, sosfiltfilt
 
 from paleokalmag.utils import dsh_basis
-from paleokalmag.data_handling import read_data, Data
+from paleokalmag.data_handling import Data
+# from paleokalmag.data_handling import read_data
 
 from pymagglobal.utils import REARTH, lmax2N, i2lm_l    # , scaling
 
@@ -214,7 +215,7 @@ tau_solar_longterm = 500
 
 solar_constr = read_table(
     '../dat/US10_phi_mon_tab_230907.txt',
-    sep='\s+',
+    sep=r'\s+',
     skiprows=23,
     header=None,
     dtype=float,
