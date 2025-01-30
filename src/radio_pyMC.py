@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 
 import pymc as pm
@@ -30,7 +31,6 @@ from common import (
     n_ref_solar,
     ref_solar,
     chol_solar,
-    chol_solar_longterm,
     prior_mean_solar,
     radData,
     idx_GL,
@@ -41,9 +41,16 @@ from common import (
     prod_C14,
 )
 
+from longterm_component import SolarLongtermComponent
+
 ref_coeffs = pt.as_tensor(_ref_coeffs)
 base_tensor = pt.as_tensor(base.transpose(1, 0, 2))
 fac = 0.63712**3
+
+try:
+    tau_solar_longterm = int(sys.argv[1])
+except IndexError:
+    tau_solar_longterm = None
 
 
 with pm.Model() as mcModel:
@@ -253,20 +260,12 @@ with pm.Model() as mcModel:
     )
 
     # add longterm component
-    sm_cent_longterm = pm.Normal(
-        'sm_cent_longterm',
-        mu=0,
-        sigma=1,
-        size=(len(knots_solar)-n_ref_solar,),
+    solar_longterm = SolarLongtermComponent(
+        knots_solar,
+        tau_solar_longterm,
+        n_ref_solar=n_ref_solar,
     )
-    sm_longterm_scale = pm.Gamma(
-        'sm_longterm_scale',
-        alpha=3,
-        beta=3/200,
-        size=1,
-    )
-    sm_at_longterm = sm_longterm_scale * chol_solar_longterm @ sm_cent_longterm
-    sm_at_both = sm_at_bimod + sm_at_longterm
+    sm_at_both = sm_at_bimod + solar_longterm.get_sm_at_longterm()
 
     # penalize smaller than zero
     zero_bound = pm.math.sum(
@@ -386,4 +385,8 @@ if __name__ == '__main__':
         )
 
     # idata.to_netcdf('../out/radio_result.nc')
-    idata.to_netcdf('../out/radio_longterm_500_result.nc')
+    suffix = ''
+    if tau_solar_longterm is not None:
+        suffix += f'longterm_{tau_solar_longterm:d}_'
+
+    idata.to_netcdf(f'../out/radio_{suffix}result.nc')
