@@ -389,4 +389,4 @@ if __name__ == '__main__':
     if tau_solar_longterm is not None:
         suffix += f'longterm_{tau_solar_longterm:d}_'
 
-    idata.to_netcdf(f'../out/radio_{suffix}_calib_fix_result.nc')
+    idata.to_netcdf(f'../out/radio_{suffix}calib_fix_result.nc')
