@@ -21,20 +21,20 @@ from common import (
     idx_F,
     tDir,
     tInt,
-    alpha_nu,
-    beta_nu,
+    # alpha_nu,
+    # beta_nu,
 )
 
 ref_coeffs = pt.as_tensor(_ref_coeffs)
 base_tensor = pt.as_tensor(base.transpose(1, 0, 2))
 
 with pm.Model() as mcModel:
-    nus = pm.Gamma(
-        'nu',
-        alpha=alpha_nu,
-        beta=beta_nu,
-        size=3,
-    )
+    # nus = pm.Gamma(
+    #     'nu',
+    #     alpha=alpha_nu,
+    #     beta=beta_nu,
+    #     size=3,
+    # )
 
     t_cent = pm.Normal(
         't_cent',
@@ -53,9 +53,12 @@ with pm.Model() as mcModel:
 
     gs_at = pt.batched_dot(chol, g_cent) + prior_mean
 
-    gs_at_knots = pt.horizontal_stack(
-        gs_at,
-        ref_coeffs,
+    gs_at_knots = pm.Deterministic(
+        'gs_at_knots',
+        pt.horizontal_stack(
+            gs_at,
+            ref_coeffs,
+        ),
     )
 
     gs = interp(
@@ -114,7 +117,8 @@ with pm.Model() as mcModel:
 
     rD_obs = pm.StudentT(
         'd_obs',
-        nu=1 + nus[0],
+        # nu=1 + nus[0],
+        nu=4,
         mu=rD,
         sigma=1.,
         observed=np.zeros(len(idx_D)),
@@ -122,7 +126,8 @@ with pm.Model() as mcModel:
 
     rI_obs = pm.StudentT(
         'i_obs',
-        nu=1 + nus[1],
+        # nu=1 + nus[1],
+        nu=4,
         mu=rI,
         sigma=1.,
         observed=np.zeros(len(idx_I)),
@@ -130,7 +135,8 @@ with pm.Model() as mcModel:
 
     rF_obs = pm.StudentT(
         'f_obs',
-        nu=1 + nus[2],
+        # nu=1 + nus[2],
+        nu=4,
         mu=rF,
         sigma=1.,
         observed=np.zeros(len(idx_F)),
@@ -157,4 +163,4 @@ if __name__ == '__main__':
             },
         )
 
-    idata.to_netcdf('../dat/arch_pfm_max_result.nc')
+    idata.to_netcdf('../out/arch_result.nc')

@@ -7,7 +7,8 @@ from pandas import read_table, cut, read_csv
 from scipy.signal import butter, sosfiltfilt
 
 from paleokalmag.utils import dsh_basis
-from paleokalmag.data_handling import read_data, Data
+from paleokalmag.data_handling import Data
+# from paleokalmag.data_handling import read_data
 
 from pymagglobal.utils import REARTH, lmax2N, i2lm_l    # , scaling
 
@@ -99,7 +100,7 @@ _taus = [
     200,
     133,
     174,
-    137,
+    138,
     95,
 ]
 
@@ -206,13 +207,13 @@ prior_mean = prior_mean[:, :len(knots)-n_ref]
 # Solar modulation model
 # Check multimodal prior
 # Set higher (~600) to check for less variation
-mean_solar = 477.5
+mean_solar = 550
 sigma_solar = 191
 tau_solar = 25.6
 
 solar_constr = read_table(
     '../dat/US10_phi_mon_tab_230907.txt',
-    sep='\s+',
+    sep=r'\s+',
     skiprows=23,
     header=None,
     dtype=float,
@@ -252,8 +253,8 @@ cor_obs = matern_kernel(
 )
 cov_solar = matern_kernel(
     knots_solar,
-    sigma=sigma_solar,
     tau=tau_solar,
+    sigma=sigma_solar,
 )
 
 _icov_obs = np.linalg.inv(cov_obs + 1e-4*np.eye(len(ref_solar_years)))
@@ -267,6 +268,7 @@ chol_solar = np.linalg.cholesky(cov_solar+1e-6*np.eye(len(knots_solar)))[
     :-n_ref_solar,
     :-n_ref_solar,
 ]
+
 
 # -----------------------------------------------------------------------------
 # Data setup

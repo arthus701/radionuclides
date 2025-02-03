@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 
 import pymc as pm
@@ -22,8 +23,8 @@ from common import (
     idx_F,
     tDir,
     tInt,
-    alpha_nu,
-    beta_nu,
+    # alpha_nu,
+    # beta_nu,
     mean_solar,
     sigma_solar,
     knots_solar,
@@ -40,20 +41,27 @@ from common import (
     prod_C14,
 )
 
+from longterm_component import SolarLongtermComponent
+
 ref_coeffs = pt.as_tensor(_ref_coeffs)
 base_tensor = pt.as_tensor(base.transpose(1, 0, 2))
 fac = 0.63712**3
+
+try:
+    tau_solar_longterm = int(sys.argv[1])
+except IndexError:
+    tau_solar_longterm = None
 
 
 with pm.Model() as mcModel:
     # -------------------------------------------------------------------------
     # Archeomag
-    nus = pm.Gamma(
-        'nu',
-        alpha=alpha_nu,
-        beta=beta_nu,
-        size=3,
-    )
+    # nus = pm.Gamma(
+    #     'nu',
+    #     alpha=alpha_nu,
+    #     beta=beta_nu,
+    #     size=3,
+    # )
 
     t_cent = pm.Normal(
         't_cent',
@@ -136,7 +144,8 @@ with pm.Model() as mcModel:
 
     rD_obs = pm.StudentT(
         'd_obs',
-        nu=1 + nus[0],
+        # nu=1 + nus[0],
+        nu=4,
         mu=rD,
         sigma=1.,
         observed=np.zeros(len(idx_D)),
@@ -144,7 +153,8 @@ with pm.Model() as mcModel:
 
     rI_obs = pm.StudentT(
         'i_obs',
-        nu=1 + nus[1],
+        # nu=1 + nus[1],
+        nu=4,
         mu=rI,
         sigma=1.,
         observed=np.zeros(len(idx_I)),
@@ -152,7 +162,8 @@ with pm.Model() as mcModel:
 
     rF_obs = pm.StudentT(
         'f_obs',
-        nu=1 + nus[2],
+        # nu=1 + nus[2],
+        nu=4,
         mu=rF,
         sigma=1.,
         observed=np.zeros(len(idx_F)),
@@ -194,10 +205,11 @@ with pm.Model() as mcModel:
         alpha=1.,
         beta=7.,
     )
-    tL = pm.HalfNormal(
-        'tL',
-        sigma=200.,
+    tL_cent = pm.HalfNormal(
+        'tL_cent',
+        sigma=1.,
     )
+    tL = 200 * tL_cent
     tR = pm.TruncatedNormal(
         'tR',
         mu=1000.,
@@ -247,11 +259,29 @@ with pm.Model() as mcModel:
         inverse_approx,
     )
 
+    # add longterm component
+    solar_longterm = SolarLongtermComponent(
+        knots_solar,
+        tau_solar_longterm,
+        n_ref_solar=n_ref_solar,
+    )
+    sm_at_both = sm_at_bimod + solar_longterm.get_sm_at_longterm()
+
+    # penalize smaller than zero
+    zero_bound = pm.math.sum(
+        pm.math.log(
+            pm.math.sigmoid(
+                1e-2 * (sm_at_both - 150)
+            )
+        )
+    )
+    pm.Potential('zero_bound', zero_bound)
+
     sm_at_knots = pm.Deterministic(
         'sm_at_knots',
         pm.math.concatenate(
             (
-                sm_at_bimod,
+                sm_at_both,
                 ref_solar,
             ),
         ),
@@ -354,5 +384,9 @@ if __name__ == '__main__':
             },
         )
 
-    # idata.to_netcdf('../dat/radio_result.nc')
-    idata.to_netcdf('../dat/radio_bimodal_calib_fix_result.nc')
+    # idata.to_netcdf('../out/radio_result.nc')
+    suffix = ''
+    if tau_solar_longterm is not None:
+        suffix += f'longterm_{tau_solar_longterm:d}_'
+
+    idata.to_netcdf(f'../out/radio_{suffix}_calib_fix_result.nc')
