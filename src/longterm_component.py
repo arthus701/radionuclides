@@ -56,4 +56,8 @@ class SolarLongtermComponent():
             beta=3/200,
             size=1,
         )
-        return sm_longterm_scale * chol_solar_longterm @ sm_cent_longterm
+        sm_longterm = pm.Deterministic(
+            'sm_longterm',
+            sm_longterm_scale * chol_solar_longterm @ sm_cent_longterm,
+        )
+        return sm_longterm
