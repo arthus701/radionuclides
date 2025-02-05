@@ -26,8 +26,8 @@ class SolarLongtermComponent():
         if self.tau is None:
             sm_tau_longterm = 100 + pm.Gamma(
                 'sm_tau_longterm',
-                alpha=7.5,
-                beta=1 / 100,
+                alpha=3.5,
+                beta=1 / 500,
                 size=1,
             )
             frac = pt.as_tensor(
