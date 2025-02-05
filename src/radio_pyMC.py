@@ -386,7 +386,9 @@ if __name__ == '__main__':
 
     # idata.to_netcdf('../out/radio_result.nc')
     suffix = ''
-    if tau_solar_longterm is not None:
+    if tau_solar_longterm is None:
+        suffix += 'longterm_'
+    elif tau_solar_longterm != 0:
         suffix += f'longterm_{tau_solar_longterm:d}_'
 
     idata.to_netcdf(f'../out/radio_{suffix}result.nc')
