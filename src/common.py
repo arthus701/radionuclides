@@ -2,7 +2,7 @@
 """
 
 import numpy as np
-from pandas import read_table, cut, read_csv
+import pandas as pd
 
 from scipy.signal import butter, sosfiltfilt
 
@@ -211,7 +211,7 @@ mean_solar = 550
 sigma_solar = 191
 tau_solar = 25.6
 
-solar_constr = read_table(
+solar_constr = pd.read_table(
     '../dat/US10_phi_mon_tab_230907.txt',
     sep=r'\s+',
     skiprows=23,
@@ -224,7 +224,7 @@ solar_constr = read_table(
     ],
 )
 bins = knots_solar[-6:]+11
-solar_constr['Interval'] = cut(solar_constr['Year'], bins)
+solar_constr['Interval'] = pd.cut(solar_constr['Year'], bins)
 
 ref_solar_years = []
 ref_solar = []
@@ -341,7 +341,7 @@ age_fix_uids = [
 #
 # rawData.reset_index(inplace=True, drop=True)
 
-rawData = read_csv(
+rawData = pd.read_csv(
     '../dat/afm9k2_data.csv',
 )
 rawData['FID'] = 'from Andreas'
@@ -357,7 +357,7 @@ z_at = data.inputs
 base = dsh_basis(lmax, z_at)
 base = base.reshape(lmax2N(lmax), z_at.shape[1], 3)
 
-radData = read_table(
+radData = pd.read_table(
     '../dat/CRN_9k_230922.txt'
 )
 radData.rename(
@@ -369,6 +369,47 @@ radData.rename(
     },
     inplace=True,
 )
+
+annual_C14_data = pd.read_excel(
+    '../dat/14C production rate annual last 2000 years_correctlp8.xlsx',
+    header=1,
+)
+annual_C14_data['t'] = 1950 - annual_C14_data['year BP']
+annual_C14_data.rename(
+    columns={
+        '14C production rate normalised, no filter': 'C14',
+        '1Sigma.1': 'dC14',
+    },
+    inplace=True,
+)
+idxs = radData.query(f't > {min(annual_C14_data["t"])}').index
+radData.loc[idxs, 'C14'] = np.nan
+radData['dC14'] = np.nan
+merge_rows = []
+for _, row in annual_C14_data[['t', 'C14', 'dC14']].iterrows():
+    # try:
+    idx = radData.query(f't == {row["t"]}').index
+    if 0 == len(idx):
+        merge_rows.append(row)
+    elif len(idx) == 1:
+        radData.loc[idx, 'C14'] = row['C14']
+        radData.loc[idx, 'dC14'] = row['dC14']
+    else:
+        raise ValueError(f'Multiple entries found for t = {row["t"]}')
+
+radData = pd.concat(
+    [
+        pd.DataFrame(merge_rows),
+        radData,
+    ],
+)
+radData.sort_values(by='t', inplace=True)
+radData.reset_index(inplace=True, drop=True)
+idx = radData['dC14'].isna()
+radData.loc[idx, 'dC14'] = 0.05 * np.abs(radData.loc[idx, 'C14'])
+radData['dBe10_NH'] = 0.1 * np.abs(radData['Be10_NH'])
+radData['dBe10_SH'] = 0.1 * np.abs(radData['Be10_SH'])
+
 
 idx_GL = np.asarray(radData.query('C14 == C14').index, dtype=int)
 idx_NH = np.asarray(radData.query('Be10_NH == Be10_NH').index, dtype=int)

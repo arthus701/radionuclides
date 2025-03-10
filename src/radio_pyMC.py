@@ -41,16 +41,16 @@ from common import (
     prod_C14,
 )
 
-from longterm_component import SolarLongtermComponent
+from fast_component import SolarFastComponent
 
 ref_coeffs = pt.as_tensor(_ref_coeffs)
 base_tensor = pt.as_tensor(base.transpose(1, 0, 2))
 fac = 0.63712**3
 
 try:
-    tau_solar_longterm = int(sys.argv[1])
+    tau_solar_fast = int(sys.argv[1])
 except IndexError:
-    tau_solar_longterm = None
+    tau_solar_fast = None
 
 
 with pm.Model() as mcModel:
@@ -259,13 +259,13 @@ with pm.Model() as mcModel:
         inverse_approx,
     )
 
-    # add longterm component
-    solar_longterm = SolarLongtermComponent(
+    # add fast component
+    solar_fast = SolarFastComponent(
         knots_solar,
-        tau_solar_longterm,
+        tau_solar_fast,
         n_ref_solar=n_ref_solar,
     )
-    sm_at_both = sm_at_bimod + solar_longterm.get_sm_at_longterm()
+    sm_at_both = sm_at_bimod + solar_fast.get_sm_at_fast()
 
     # penalize smaller than zero
     zero_bound = pm.math.sum(
@@ -324,7 +324,7 @@ with pm.Model() as mcModel:
         (
             (q_GL * (1 + hpa / 2.))[idx_NH] / cal_nh
             - radData.loc[idx_NH, 'Be10_NH'].values
-        ) / 0.1,
+        ) / radData.loc[idx_SH, 'dBe10_NH'].values,
     )
     be10_nh_obs = pm.Normal(
         'Be10_NH',
@@ -339,7 +339,7 @@ with pm.Model() as mcModel:
         (
             (q_GL * (1 - hpa / 2.))[idx_SH] / cal_sh
             - radData.loc[idx_SH, 'Be10_SH'].values
-        ) / 0.1,
+        ) / radData.loc[idx_SH, 'dBe10_SH'].values,
     )
     be10_sh_obs = pm.Normal(
         'Be10_SH',
@@ -354,7 +354,7 @@ with pm.Model() as mcModel:
         (
             q_C14[idx_GL] / cal_c14
             - radData.loc[idx_GL, 'C14'].values
-        ) / 0.05,
+        ) / radData.loc[idx_GL, 'dC14'].values,
     )
     c14_obs = pm.Normal(
         'C14',
@@ -386,9 +386,9 @@ if __name__ == '__main__':
 
     # idata.to_netcdf('../out/radio_result.nc')
     suffix = ''
-    if tau_solar_longterm is None:
-        suffix += 'longterm_'
-    elif tau_solar_longterm != 0:
-        suffix += f'longterm_{tau_solar_longterm:d}_'
+    if tau_solar_fast is None:
+        suffix += 'fast_'
+    elif tau_solar_fast != 0:
+        suffix += f'fast_{tau_solar_fast:d}_'
 
     idata.to_netcdf(f'../out/radio_{suffix}result.nc')
