@@ -324,7 +324,7 @@ with pm.Model() as mcModel:
         (
             (q_GL * (1 + hpa / 2.))[idx_NH] / cal_nh
             - radData.loc[idx_NH, 'Be10_NH'].values
-        ) / radData.loc[idx_SH, 'dBe10_NH'].values,
+        ) / radData.loc[idx_NH, 'dBe10_NH'].values,
     )
     be10_nh_obs = pm.Normal(
         'Be10_NH',
