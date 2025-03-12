@@ -53,7 +53,7 @@ class SolarFastComponent():
         sm_fast_scale = pm.Gamma(
             'sm_fast_scale',
             alpha=3,
-            beta=3/400,
+            beta=3/100,
             size=1,
         )
         damping = pm.math.sigmoid(
