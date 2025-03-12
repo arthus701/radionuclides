@@ -278,7 +278,7 @@ with pm.Model() as mcModel:
     zero_bound = pm.math.sum(
         pm.math.log(
             pm.math.sigmoid(
-                1e-2 * (sm_at_both - 150)
+                1e-1 * (sm_at_bimod - 150)
             )
         )
     )
