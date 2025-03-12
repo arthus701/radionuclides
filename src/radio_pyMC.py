@@ -206,17 +206,19 @@ with pm.Model() as mcModel:
         alpha=1.,
         beta=7.,
     )
-    tL_cent = pm.HalfNormal(
-        'tL_cent',
-        sigma=1.,
-    )
-    tL = 200 * tL_cent
-    tR = pm.TruncatedNormal(
-        'tR',
-        mu=1000.,
-        sigma=200.,
-        lower=0.,
-    )
+    # tL_cent = pm.HalfNormal(
+    #     'tL_cent',
+    #     sigma=1.,
+    # )
+    # tL = 200 * tL_cent
+    # tR = pm.TruncatedNormal(
+    #     'tR',
+    #     mu=1000.,
+    #     sigma=200.,
+    #     lower=0.,
+    # )
+    tL = 0.61 * 200
+    tR = 831.155
 
     alpha = np.array(
         [
@@ -284,6 +286,7 @@ with pm.Model() as mcModel:
     # )
     # pm.Potential('zero_bound', zero_bound)
 
+    # XXX can be merged with the concatenation above
     sm_at_knots = pm.Deterministic(
         'sm_at_knots',
         pm.math.concatenate(
