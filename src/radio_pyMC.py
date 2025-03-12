@@ -179,11 +179,6 @@ with pm.Model() as mcModel:
         size=(len(knots_solar)-n_ref_solar,),
     )
 
-    s_fac = pm.Normal(
-        's_fac',
-        sigma=1.,
-        size=3,
-    )
     # correlated samples
     sm_at = chol_solar @ sm_cent + prior_mean_solar
 
@@ -269,12 +264,12 @@ with pm.Model() as mcModel:
         n_ref_solar=n_ref_solar,
     )
     idx = len(knots_solar) - len(knots_solar_fine)
-    sm_at_both = pm.math.concatenate(
-        (
-            sm_at_bimod[:idx],
-            sm_at_bimod[idx:] + solar_fast.get_sm_at_fast(),
-        )
-    )
+    # sm_at_both = pm.math.concatenate(
+    #     (
+    #         sm_at_bimod[:idx],
+    #         sm_at_bimod[idx:] + solar_fast.get_sm_at_fast(),
+    #     )
+    # )
 
     # penalize smaller than zero
     # zero_bound = pm.math.sum(
@@ -286,12 +281,12 @@ with pm.Model() as mcModel:
     # )
     # pm.Potential('zero_bound', zero_bound)
 
-    # XXX can be merged with the concatenation above
     sm_at_knots = pm.Deterministic(
         'sm_at_knots',
         pm.math.concatenate(
             (
-                sm_at_both,
+                sm_at_bimod[:idx],
+                sm_at_bimod[idx:] + solar_fast.get_sm_at_fast(),
                 ref_solar,
             ),
         ),
@@ -323,6 +318,11 @@ with pm.Model() as mcModel:
     q_C14 = prod_C14(dm, sm_rad)
     q_C14_cal = prod_C14(fac*abs(gamma_0), mean_solar)
 
+    s_fac = pm.Normal(
+        's_fac',
+        sigma=1.,
+        size=3,
+    )
     # XXX Parametrize the 0.1
     cal_nh = q_GL_cal * (1 + s_fac[0]*0.05)
     cal_sh = q_GL_cal * (1 + s_fac[1]*0.05)
@@ -378,7 +378,7 @@ with pm.Model() as mcModel:
 if __name__ == '__main__':
     from common import mcmc_params
     from pymc.sampling import jax as pmj
-    from numpyro.infer.initialization import init_to_mean
+    from numpyro.infer.initialization import init_to_median
 
     with mcModel:
         idata = pmj.sample_numpyro_nuts(
@@ -390,7 +390,7 @@ if __name__ == '__main__':
             target_accept=mcmc_params['target_accept'],
             postprocessing_backend='cpu',
             nuts_kwargs={
-                'init_strategy': init_to_mean,
+                'init_strategy': init_to_median,
             },
         )
 
