@@ -6,9 +6,10 @@ from utils import matern_kernel
 
 
 class SolarFastComponent():
-    def __init__(self, knots_solar, tau_solar, n_ref_solar=0):
+    def __init__(self, knots_solar, tau_solar, n_ref_solar=0, jitter=1e-4):
         self.knots = knots_solar[:-n_ref_solar]
         self.tau = tau_solar
+        self.jitter = jitter
 
         if self.tau is not None:
             cov_solar_fast = matern_kernel(
@@ -17,7 +18,7 @@ class SolarFastComponent():
                 tau=tau_solar,
             )
             self.chol_solar_fast = np.linalg.cholesky(
-                cov_solar_fast+1e-6*np.eye(len(self.knots))
+                cov_solar_fast + self.jitter * np.eye(len(self.knots))
             )
 
     def get_sm_at_fast(self):
@@ -39,7 +40,8 @@ class SolarFastComponent():
             cov_solar_fast = (1. + frac) * pm.math.exp(-frac)
 
             chol_solar_fast = pt.slinalg.cholesky(
-                cov_solar_fast + 1e-6*pt.as_tensor(np.eye(len(self.knots)))
+                cov_solar_fast
+                + self.jitter * pt.as_tensor(np.eye(len(self.knots)))
             )
         else:
             chol_solar_fast = self.chol_solar_fast
@@ -57,7 +59,7 @@ class SolarFastComponent():
             size=1,
         )
         damping = pm.math.sigmoid(
-            0.1 * (self.knots - 100)
+            0.1 * (self.knots + 100)
         )
         sm_fast = pm.Deterministic(
             'sm_fast',
