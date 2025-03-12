@@ -117,9 +117,11 @@ _taus = [
 
 # Range and resolution
 t_min = -7000
+t_solar_fine = -200
 t_max = 2000
 step = 50
-step_solar = 22
+step_solar_coarse = 22
+step_solar_fine = 2
 
 # MCMC parameters
 mcmc_params = {
@@ -146,14 +148,26 @@ knots = np.arange(
     t_max + step,
     step,
 )
-knots_solar = np.flip(
+knots_solar_fine = np.flip(
     np.arange(
-        t_max + step_solar,
-        t_min,
-        -step_solar,
+        t_max,
+        t_solar_fine-step_solar_fine,
+        -step_solar_fine,
     )
 )
-
+knots_solar_coarse = np.flip(
+    np.arange(
+        t_solar_fine,
+        t_min-step_solar_coarse,
+        -step_solar_coarse,
+    )
+)
+knots_solar = np.hstack(
+    [
+        knots_solar_coarse,
+        knots_solar_fine,
+    ],
+)
 # -----------------------------------------------------------------------------
 # Magnetic field model
 # Prior mean and covariance (as cholesky factors)
@@ -223,7 +237,8 @@ solar_constr = pd.read_table(
         'Phi (MV)',
     ],
 )
-bins = knots_solar[-6:]+11
+# back until 1923
+bins = knots_solar[-40:]+1
 solar_constr['Interval'] = pd.cut(solar_constr['Year'], bins)
 
 ref_solar_years = []
@@ -405,8 +420,10 @@ radData = pd.concat(
 )
 radData.sort_values(by='t', inplace=True)
 radData.reset_index(inplace=True, drop=True)
-idx = radData['dC14'].isna()
-radData.loc[idx, 'dC14'] = 0.05 * np.abs(radData.loc[idx, 'C14'])
+# idx = radData['dC14'].isna()
+# radData.loc[idx, 'dC14'] = 0.05 * np.abs(radData.loc[idx, 'C14'])
+# XXX Use 5 % errors for all C14 records
+radData['dC14'] = 0.05 * np.abs(radData['C14'])
 radData['dBe10_NH'] = 0.1 * np.abs(radData['Be10_NH'])
 radData['dBe10_SH'] = 0.1 * np.abs(radData['Be10_SH'])
 

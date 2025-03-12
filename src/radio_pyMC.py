@@ -28,6 +28,7 @@ from common import (
     mean_solar,
     sigma_solar,
     knots_solar,
+    knots_solar_fine,
     n_ref_solar,
     ref_solar,
     chol_solar,
@@ -261,7 +262,7 @@ with pm.Model() as mcModel:
 
     # add fast component
     solar_fast = SolarFastComponent(
-        knots_solar,
+        knots_solar_fine,
         tau_solar_fast,
         n_ref_solar=n_ref_solar,
     )

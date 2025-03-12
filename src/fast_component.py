@@ -25,7 +25,7 @@ class SolarFastComponent():
             return 0
         if self.tau is None:
             sm_tau_fast = 1 + pm.Gamma(
-                'sm_tau',
+                'sm_tau_fast',
                 alpha=2.5,
                 beta=1,
                 size=1,
@@ -56,8 +56,11 @@ class SolarFastComponent():
             beta=3/400,
             size=1,
         )
+        damping = pm.math.sigmoid(
+            0.1 * (self.knots - 100)
+        )
         sm_fast = pm.Deterministic(
             'sm_fast',
-            sm_fast_scale * chol_solar_fast @ sm_cent_fast,
+            damping * sm_fast_scale * chol_solar_fast @ sm_cent_fast,
         )
         return sm_fast
