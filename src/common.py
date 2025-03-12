@@ -409,7 +409,8 @@ for _, row in annual_C14_data[['t', 'C14', 'dC14']].iterrows():
         merge_rows.append(row)
     elif len(idx) == 1:
         radData.loc[idx, 'C14'] = row['C14']
-        radData.loc[idx, 'dC14'] = row['dC14']
+        # radData.loc[idx, 'dC14'] = row['dC14']
+        radData.loc[idx, 'dC14'] = 0.2 * row['C14']
     else:
         raise ValueError(f'Multiple entries found for t = {row["t"]}')
 
@@ -421,10 +422,10 @@ radData = pd.concat(
 )
 radData.sort_values(by='t', inplace=True)
 radData.reset_index(inplace=True, drop=True)
-# idx = radData['dC14'].isna()
-# radData.loc[idx, 'dC14'] = 0.05 * np.abs(radData.loc[idx, 'C14'])
+idx = radData['dC14'].isna()
+radData.loc[idx, 'dC14'] = 0.05 * np.abs(radData.loc[idx, 'C14'])
 # XXX Use 5 % errors for all C14 records
-radData['dC14'] = 0.05 * np.abs(radData['C14'])
+# radData['dC14'] = 0.05 * np.abs(radData['C14'])
 radData['dBe10_NH'] = 0.1 * np.abs(radData['Be10_NH'])
 radData['dBe10_SH'] = 0.1 * np.abs(radData['Be10_SH'])
 
