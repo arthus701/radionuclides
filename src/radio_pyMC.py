@@ -275,14 +275,14 @@ with pm.Model() as mcModel:
     )
 
     # penalize smaller than zero
-    zero_bound = pm.math.sum(
-        pm.math.log(
-            pm.math.sigmoid(
-                1e-1 * (sm_at_bimod - 150)
-            )
-        )
-    )
-    pm.Potential('zero_bound', zero_bound)
+    # zero_bound = pm.math.sum(
+    #     pm.math.log(
+    #         pm.math.sigmoid(
+    #             1e-1 * (sm_at_bimod - 150)
+    #         )
+    #     )
+    # )
+    # pm.Potential('zero_bound', zero_bound)
 
     sm_at_knots = pm.Deterministic(
         'sm_at_knots',
