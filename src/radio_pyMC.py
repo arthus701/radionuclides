@@ -266,7 +266,13 @@ with pm.Model() as mcModel:
         tau_solar_fast,
         n_ref_solar=n_ref_solar,
     )
-    sm_at_both = sm_at_bimod + solar_fast.get_sm_at_fast()
+    idx = len(knots_solar) - len(knots_solar_fine)
+    sm_at_both = pm.math.concatenate(
+        (
+            sm_at_bimod[:idx],
+            sm_at_bimod[idx:] + solar_fast.get_sm_at_fast(),
+        )
+    )
 
     # penalize smaller than zero
     zero_bound = pm.math.sum(
