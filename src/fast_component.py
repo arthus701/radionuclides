@@ -7,7 +7,8 @@ from utils import matern_kernel
 
 class SolarFastComponent():
     def __init__(self, knots_solar, tau_solar, n_ref_solar=0, jitter=1e-4):
-        self.knots = knots_solar[:-n_ref_solar]
+        idx = len(knots_solar) - n_ref_solar
+        self.knots = knots_solar[:idx]
         self.tau = tau_solar
         self.jitter = jitter
 
