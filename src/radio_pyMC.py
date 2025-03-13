@@ -261,9 +261,10 @@ with pm.Model() as mcModel:
     solar_fast = SolarFastComponent(
         knots_solar_fine,
         tau_solar_fast,
-        n_ref_solar=n_ref_solar,
+        n_ref_solar=0,
     )
     idx = len(knots_solar) - len(knots_solar_fine)
+    idx_ref_solar = len(knots_solar_fine) - n_ref_solar
     # sm_at_both = pm.math.concatenate(
     #     (
     #         sm_at_bimod[:idx],
@@ -280,14 +281,14 @@ with pm.Model() as mcModel:
     #     )
     # )
     # pm.Potential('zero_bound', zero_bound)
-
+    sm_fast = solar_fast.get_sm_at_fast()
     sm_at_knots = pm.Deterministic(
         'sm_at_knots',
         pm.math.concatenate(
             (
                 sm_at_bimod[:idx],
-                sm_at_bimod[idx:] + solar_fast.get_sm_at_fast(),
-                ref_solar,
+                sm_at_bimod[idx:] + sm_fast[:idx_ref_solar],
+                ref_solar + sm_fast[idx_ref_solar:],
             ),
         ),
     )
