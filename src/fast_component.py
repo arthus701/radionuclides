@@ -58,9 +58,10 @@ class SolarFastComponent():
             beta=3/200,
             size=1,
         )
-        damping = pm.math.sigmoid(
-            0.1 * (self.knots + 100)
-        )
+        # damping = pm.math.sigmoid(
+        #     0.1 * (self.knots + 100)
+        # )
+        damping = 1
         sm_fast = pm.Deterministic(
             'sm_fast',
             damping * sm_fast_scale * chol_solar_fast @ sm_cent_fast,
