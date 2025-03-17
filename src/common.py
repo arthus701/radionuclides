@@ -386,41 +386,41 @@ radData.rename(
     inplace=True,
 )
 
-# annual_C14_data = pd.read_excel(
-#     '../dat/14C production rate annual last 2000 years_correctlp8.xlsx',
-#     header=1,
-# )
-# annual_C14_data['t'] = 1950 - annual_C14_data['year BP']
-# annual_C14_data.rename(
-#     columns={
-#         '14C production rate normalised, no filter': 'C14',
-#         '1Sigma.1': 'dC14',
-#     },
-#     inplace=True,
-# )
-# idxs = radData.query(f't > {min(annual_C14_data["t"])}').index
-# radData.loc[idxs, 'C14'] = np.nan
-# radData['dC14'] = np.nan
-# merge_rows = []
-# for _, row in annual_C14_data[['t', 'C14', 'dC14']].iterrows():
-#     # try:
-#     idx = radData.query(f't == {row["t"]}').index
-#     if 0 == len(idx):
-#         merge_rows.append(row)
-#     elif len(idx) == 1:
-#         radData.loc[idx, 'C14'] = row['C14']
-#         # radData.loc[idx, 'dC14'] = row['dC14']
-#         radData.loc[idx, 'dC14'] = 0.2 * row['C14']
-#     else:
-#         raise ValueError(f'Multiple entries found for t = {row["t"]}')
-#
-# radData = pd.concat(
-#     [
-#         pd.DataFrame(merge_rows),
-#         radData,
-#     ],
-# )
+annual_C14_data = pd.read_excel(
+    '../dat/14C production rate annual last 2000 years_correctlp8.xlsx',
+    header=1,
+)
+annual_C14_data['t'] = 1950 - annual_C14_data['year BP']
+annual_C14_data.rename(
+    columns={
+        '14C production rate normalised, no filter': 'C14',
+        '1Sigma.1': 'dC14',
+    },
+    inplace=True,
+)
+idxs = radData.query(f't > {min(annual_C14_data["t"])}').index
+radData.loc[idxs, 'C14'] = np.nan
 radData['dC14'] = np.nan
+merge_rows = []
+for _, row in annual_C14_data[['t', 'C14', 'dC14']].iterrows():
+    # try:
+    idx = radData.query(f't == {row["t"]}').index
+    if 0 == len(idx):
+        merge_rows.append(row)
+    elif len(idx) == 1:
+        radData.loc[idx, 'C14'] = row['C14']
+        # radData.loc[idx, 'dC14'] = row['dC14']
+        radData.loc[idx, 'dC14'] = 0.2      # * row['C14']
+    else:
+        raise ValueError(f'Multiple entries found for t = {row["t"]}')
+
+radData = pd.concat(
+    [
+        pd.DataFrame(merge_rows),
+        radData,
+    ],
+)
+# radData['dC14'] = np.nan
 
 radData.sort_values(by='t', inplace=True)
 radData.reset_index(inplace=True, drop=True)
