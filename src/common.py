@@ -117,17 +117,17 @@ _taus = [
 
 # Range and resolution
 t_min = -7000
-t_solar_fine = -200
+t_solar_fine = -100
 t_max = 2000
 step = 50
 step_solar_coarse = 22
-step_solar_fine = 2
+step_solar_fine = 4
 
 # MCMC parameters
 mcmc_params = {
     'n_samps': 500,
     'n_warmup': 1000,
-    'n_chains': 4,
+    'n_chains': 2,
     'target_accept': 0.95,
 }
 
@@ -425,13 +425,44 @@ radData['dC14'] = np.nan
 radData.sort_values(by='t', inplace=True)
 radData.reset_index(inplace=True, drop=True)
 idx = radData['dC14'].isna()
-radData.loc[idx, 'dC14'] = 0.05 * np.abs(radData.loc[idx, 'C14'])
+radData.loc[idx, 'dC14'] = 0.05     # * np.abs(radData.loc[idx, 'C14'])
 # XXX Use 5 % errors for all C14 records
 # radData['dC14'] = 0.05 * np.abs(radData['C14'])
-radData['dBe10_NH'] = 0.1 * np.abs(radData['Be10_NH'])
-radData['dBe10_SH'] = 0.1 * np.abs(radData['Be10_SH'])
+radData['dBe10_NH'] = 0.1   # * np.abs(radData['Be10_NH'])
+radData['dBe10_SH'] = 0.1   # * np.abs(radData['Be10_SH'])
 
 
 idx_GL = np.asarray(radData.query('C14 == C14').index, dtype=int)
 idx_NH = np.asarray(radData.query('Be10_NH == Be10_NH').index, dtype=int)
 idx_SH = np.asarray(radData.query('Be10_SH == Be10_SH').index, dtype=int)
+
+
+if __name__ == '__main__':
+    from matplotlib import pyplot as plt
+
+    fig, ax = plt.subplots(
+        1, 1,
+        figsize=(10, 5),
+    )
+
+    ax.errorbar(
+        radData['t'],
+        radData['C14'],
+        yerr=radData['dC14'],
+        ls='',
+        color='grey',
+        alpha=0.3,
+    )
+    ax.scatter(
+        radData['t'],
+        radData['C14'],
+        ls='',
+        color='grey',
+        marker='.',
+    )
+    ax.set_xlabel('time [yrs.]')
+    ax.set_ylabel('$^{14}$C production (normalized)')
+
+    fig.tight_layout()
+
+    plt.show()
