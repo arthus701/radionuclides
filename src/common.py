@@ -410,7 +410,7 @@ for _, row in annual_C14_data[['t', 'C14', 'dC14']].iterrows():
     elif len(idx) == 1:
         radData.loc[idx, 'C14'] = row['C14']
         # radData.loc[idx, 'dC14'] = row['dC14']
-        radData.loc[idx, 'dC14'] = 0.2      # * row['C14']
+        radData.loc[idx, 'dC14'] = 0.1      # * row['C14']
     else:
         raise ValueError(f'Multiple entries found for t = {row["t"]}')
 
