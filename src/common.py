@@ -398,6 +398,10 @@ annual_C14_data.rename(
     },
     inplace=True,
 )
+
+# XXX
+annual_C14_data['dC14'] = 0.2
+
 idxs = radData.query(f't > {min(annual_C14_data["t"])}').index
 radData.loc[idxs, 'C14'] = np.nan
 radData['dC14'] = np.nan
