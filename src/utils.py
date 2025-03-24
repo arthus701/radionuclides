@@ -1,5 +1,8 @@
 import numpy as np
 from numpy import ndarray
+
+import pandas as pd
+
 import jax.numpy as jnp
 from pytensor import tensor as pt, shared
 
@@ -111,3 +114,24 @@ def sqe_kernel(x, y=None, tau=2, sigma=1.):
     frac = np.abs((x[:, None] - y[None, :])) / tau
     res = sigma**2 * np.exp(-0.5*frac**2)
     return res.reshape(x.shape[0], y.shape[0])
+
+
+def bin_average(df, window):
+    bins = []
+    avg_values = []
+    current_bin = df['t'].max()
+    while current_bin > df['t'].min():
+        mask = (
+            (df['t'] >= current_bin - window / 2)
+            & (df['t'] <= current_bin + window / 2)
+        )
+        bins.append(current_bin)
+        avg_values.append(df.loc[mask, 'C14'].mean())
+        current_bin -= window
+
+    return pd.DataFrame(
+        data={
+            't': bins,
+            'C14': avg_values,
+        }
+    )
