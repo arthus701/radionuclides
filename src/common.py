@@ -12,7 +12,7 @@ from paleokalmag.data_handling import Data
 
 from pymagglobal.utils import REARTH, lmax2N, i2lm_l    # , scaling
 
-from utils import matern_kernel
+from utils import matern_kernel, bin_average
 
 
 def butter_lowpass_filter(data, cutoff, fs, order=5):
@@ -398,6 +398,8 @@ annual_C14_data.rename(
     },
     inplace=True,
 )
+
+annual_C14_data = bin_average(annual_C14_data, 2)
 
 # XXX
 annual_C14_data['dC14'] = 0.05
