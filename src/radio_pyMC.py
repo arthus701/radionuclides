@@ -1,4 +1,3 @@
-import sys
 import numpy as np
 
 import pymc as pm
@@ -42,16 +41,13 @@ from common import (
     prod_C14,
 )
 
-from fast_component import SolarFastComponent
+from fast_component import PeriodicSolarFastComponent
 
 ref_coeffs = pt.as_tensor(_ref_coeffs)
 base_tensor = pt.as_tensor(base.transpose(1, 0, 2))
 fac = 0.63712**3
 
-try:
-    tau_solar_fast = int(sys.argv[1])
-except IndexError:
-    tau_solar_fast = None
+tau_solar_fast = 30
 
 
 with pm.Model() as mcModel:
@@ -258,7 +254,7 @@ with pm.Model() as mcModel:
     )
 
     # add fast component
-    solar_fast = SolarFastComponent(
+    solar_fast = PeriodicSolarFastComponent(
         knots_solar_fine,
         tau_solar_fast,
         n_ref_solar=0,
@@ -396,10 +392,5 @@ if __name__ == '__main__':
         )
 
     # idata.to_netcdf('../out/radio_result.nc')
-    suffix = ''
-    if tau_solar_fast is None:
-        suffix += 'fast_'
-    elif tau_solar_fast != 0:
-        suffix += f'fast_{tau_solar_fast:d}_'
 
-    idata.to_netcdf(f'../out/radio_{suffix}result.nc')
+    idata.to_netcdf('../out/radio_periodic_result.nc')
