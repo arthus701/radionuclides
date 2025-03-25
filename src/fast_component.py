@@ -2,7 +2,7 @@ import numpy as np
 import pymc as pm
 from pytensor import tensor as pt
 
-from utils import matern_kernel
+from utils import matern_kernel, quasiperiodic_kernel
 
 
 class SolarFastComponent():
@@ -66,5 +66,58 @@ class SolarFastComponent():
         sm_fast = pm.Deterministic(
             'sm_fast',
             damping * sm_fast_scale * chol_solar_fast @ sm_cent_fast,
+        )
+        return sm_fast
+
+
+class PeriodicSolarFastComponent():
+    def __init__(
+        self,
+        knots_solar,
+        tau_solar,
+        p=11.,
+        gamma=0.4,
+        n_ref_solar=0,
+        jitter=1e-4,
+    ):
+        idx = len(knots_solar) - n_ref_solar
+        self.knots = knots_solar[:idx]
+        self.tau = tau_solar
+        self.jitter = jitter
+
+        cov_solar_fast = quasiperiodic_kernel(
+            self.knots,
+            sigma=1,
+            tau=tau_solar,
+            p=p,
+            gamma=gamma,
+        )
+        self.chol_solar_fast = np.linalg.cholesky(
+            cov_solar_fast + self.jitter * np.eye(len(self.knots))
+        )
+
+    def get_sm_at_fast(self):
+        if self.tau == 0:
+            return 0
+
+        sm_cent_fast = pm.Normal(
+            'sm_cent_fast',
+            mu=0,
+            sigma=1,
+            size=(len(self.knots),),
+        )
+        sm_fast_scale = pm.Gamma(
+            'sm_fast_scale',
+            alpha=3,
+            beta=3/200,
+            size=1,
+        )
+        # damping = pm.math.sigmoid(
+        #     0.1 * (self.knots + 100)
+        # )
+        damping = 1
+        sm_fast = pm.Deterministic(
+            'sm_fast',
+            damping * sm_fast_scale * self.chol_solar_fast @ sm_cent_fast,
         )
         return sm_fast
