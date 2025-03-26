@@ -157,7 +157,7 @@ knots_solar_fine = np.flip(
 )
 knots_solar_coarse = np.flip(
     np.arange(
-        t_solar_fine+step_solar_coarse,
+        t_solar_fine-step_solar_coarse,
         t_min-step_solar_coarse,
         -step_solar_coarse,
     )
