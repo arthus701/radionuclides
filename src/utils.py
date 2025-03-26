@@ -114,7 +114,7 @@ def quasiperiodic_kernel(x, y=None, tau=2, sigma=1., p=11., gamma=1.):
     y = np.asarray(y)
     frac_p = np.pi * np.abs((x[:, None] - y[None, :])) / p
     frac_t = np.abs((x[:, None] - y[None, :])) / tau
-    res = sigma**2 * np.exp(-gamma * np.sin(frac_p) - frac_t)
+    res = sigma**2 * np.exp(-gamma * np.sin(frac_p)**2 - frac_t)
     return res.reshape(x.shape[0], y.shape[0])
 
 
