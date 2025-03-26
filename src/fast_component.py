@@ -76,7 +76,7 @@ class PeriodicSolarFastComponent():
         knots_solar,
         tau_solar,
         p=11.,
-        gamma=0.4,
+        gamma=0.8,
         n_ref_solar=0,
         jitter=1e-4,
     ):
@@ -92,6 +92,7 @@ class PeriodicSolarFastComponent():
             p=p,
             gamma=gamma,
         )
+
         self.chol_solar_fast = np.linalg.cholesky(
             cov_solar_fast + self.jitter * np.eye(len(self.knots))
         )
