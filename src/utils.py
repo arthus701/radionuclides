@@ -137,7 +137,7 @@ def bin_average(df, window):
     )
 
 
-def moving_average(df, window):
+def moving_average(df, window, key='C14'):
     avg_values = []
     for i in range(len(df)):
         x_center = df.loc[i, 't']
@@ -145,6 +145,6 @@ def moving_average(df, window):
             (df['t'] >= x_center - window / 2)
             & (df['t'] <= x_center + window / 2)
         )
-        avg_values.append(df.loc[mask, 'C14'].mean())
+        avg_values.append(df.loc[mask, key].mean())
 
     return np.array(avg_values)
