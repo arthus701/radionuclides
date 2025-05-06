@@ -1,6 +1,6 @@
 """ Collection of parameters and settings common to the stan and pyMC approach.
 """
-
+from pathlib import Path
 import numpy as np
 from pandas import read_table, cut, read_csv
 
@@ -13,6 +13,8 @@ from paleokalmag.data_handling import Data
 from pymagglobal.utils import REARTH, lmax2N, i2lm_l    # , scaling
 
 from utils import matern_kernel
+
+path = str(Path(__file__).parent) + '/'
 
 
 def butter_lowpass_filter(data, cutoff, fs, order=5):
@@ -185,7 +187,7 @@ for it in range(dip):
 # Set the number of knots to be replaced by the reference model
 n_ref = 3
 
-_Kalmag = np.genfromtxt('../dat/Kalmag_CORE_MEAN_Radius_6371.2.txt')
+_Kalmag = np.genfromtxt(path + '../dat/Kalmag_CORE_MEAN_Radius_6371.2.txt')
 # Ref coeffs should be of shape (n_coeffs, n_ref)
 ref_coeffs = _Kalmag[1:n_coeffs+1] / 1000
 
@@ -212,7 +214,7 @@ sigma_solar = 191
 tau_solar = 25.6
 
 solar_constr = read_table(
-    '../dat/US10_phi_mon_tab_230907.txt',
+    path + '../dat/US10_phi_mon_tab_230907.txt',
     sep=r'\s+',
     skiprows=23,
     header=None,
@@ -342,7 +344,7 @@ age_fix_uids = [
 # rawData.reset_index(inplace=True, drop=True)
 
 rawData = read_csv(
-    '../dat/afm9k2_data.csv',
+    path + '../dat/afm9k2_data.csv',
 )
 rawData['FID'] = 'from Andreas'
 
@@ -358,7 +360,7 @@ base = dsh_basis(lmax, z_at)
 base = base.reshape(lmax2N(lmax), z_at.shape[1], 3)
 
 radData = read_table(
-    '../dat/CRN_9k_230922.txt'
+    path + '../dat/CRN_9k_230922.txt'
 )
 radData.rename(
     columns={
