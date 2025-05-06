@@ -225,7 +225,9 @@ prior_mean = prior_mean[:, :len(knots)-n_ref]
 mean_solar = 550
 sigma_solar = 191
 tau_solar = 25.6
+tau_solar_fast = 4
 
+# Extract variations on regular and fast scale
 solar_constr = pd.read_table(
     '../dat/US10_phi_mon_tab_230907.txt',
     sep=r'\s+',
@@ -238,8 +240,12 @@ solar_constr = pd.read_table(
         'Phi (MV)',
     ],
 )
-# back until 1923
-bins = knots_solar[-40:]+1
+
+idx_solar = np.argmin(
+    np.abs(solar_constr['Year'].min() - knots_solar)
+).flatten()
+ref_min = knots_solar[idx_solar].item() - step_solar_fine / 2
+bins = np.arange(ref_min, t_max+step_solar_fine, step_solar_fine)
 solar_constr['Interval'] = pd.cut(solar_constr['Year'], bins)
 
 ref_solar_years = []
@@ -252,18 +258,25 @@ for group in solar_constr.groupby('Interval', observed=True):
 ref_solar_years = np.array(ref_solar_years)
 ref_solar = np.array(ref_solar)
 
-t_const = min(ref_solar_years)
-ind_const = np.argmax(t_const <= knots_solar)
-n_ref_solar = len(knots_solar) - ind_const
+ref_solar_df = pd.DataFrame(
+    data={
+        't': ref_solar_years,
+        'Phi': ref_solar,
+    }
+)
+ref_solar_df['Phi avg.'] = moving_average(ref_solar_df, tau_solar, key='Phi')
+ref_solar_df['Phi fast'] = ref_solar_df['Phi'] - ref_solar_df['Phi avg.']
+
+n_ref_solar = len(ref_solar_df)
 
 cov_obs = matern_kernel(
-    ref_solar_years,
+    ref_solar_df['t'].values,
     tau=tau_solar,
     sigma=sigma_solar,
 )
 cor_obs = matern_kernel(
     knots_solar,
-    ref_solar_years,
+    ref_solar_df['t'].values,
     tau=tau_solar,
     sigma=sigma_solar,
 )
@@ -273,9 +286,9 @@ cov_solar = matern_kernel(
     sigma=sigma_solar,
 )
 
-_icov_obs = np.linalg.inv(cov_obs + 1e-4*np.eye(len(ref_solar_years)))
+_icov_obs = np.linalg.inv(cov_obs + 1e-4*np.eye(len(ref_solar_df['t'].values)))
 prior_mean_solar = mean_solar + cor_obs @ _icov_obs @ \
-    (ref_solar - mean_solar)
+    (ref_solar_df['Phi avg.'] - mean_solar)
 cov_solar = cov_solar - cor_obs @ _icov_obs @ cor_obs.T
 
 # prior_mean_solar = np.ones(len(knots_solar)) * mean_solar
