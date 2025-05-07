@@ -117,7 +117,7 @@ _taus = [
 
 # Range and resolution
 t_min = -7000
-t_solar_fine = -100
+t_solar_fine = -1100
 t_max = 2000
 step = 50
 step_solar_coarse = 22
@@ -127,7 +127,7 @@ step_solar_fine = 4
 mcmc_params = {
     'n_samps': 500,
     'n_warmup': 1000,
-    'n_chains': 2,
+    'n_chains': 4,
     'target_accept': 0.95,
 }
 
@@ -400,19 +400,19 @@ radData.rename(
 )
 
 annual_C14_data = pd.read_excel(
-    '../dat/14C production rate annual last 2000 years_correctlp8.xlsx',
-    header=1,
+    '../dat/14C_production_rate_tau4.xlsx',
 )
-annual_C14_data['t'] = 1950 - annual_C14_data['year BP']
+annual_C14_data['t'] = 1950 - annual_C14_data['age yr BP']
 annual_C14_data.rename(
     columns={
-        '14C production rate normalised, no filter': 'C14',
-        '1Sigma.1': 'dC14',
+        'P14 averge ': 'C14',
+        'P14 1 sigma': 'dC14',
     },
     inplace=True,
 )
 
 annual_C14_data['C14'] = moving_average(annual_C14_data, 2)
+annual_C14_data = annual_C14_data[annual_C14_data['t'] > -1000]
 
 # XXX
 annual_C14_data['dC14'] = 0.1
@@ -450,6 +450,9 @@ radData.loc[idx, 'dC14'] = 0.05     # * np.abs(radData.loc[idx, 'C14'])
 radData['dBe10_NH'] = 0.1   # * np.abs(radData['Be10_NH'])
 radData['dBe10_SH'] = 0.1   # * np.abs(radData['Be10_SH'])
 
+# exclude solar storm
+idx = radData.query('773.5 <= t and t <= 775.5').index
+radData.loc[idx, 'C14'] = np.nan
 
 idx_GL = np.asarray(radData.query('C14 == C14').index, dtype=int)
 idx_NH = np.asarray(radData.query('Be10_NH == Be10_NH').index, dtype=int)
