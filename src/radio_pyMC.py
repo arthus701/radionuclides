@@ -269,7 +269,6 @@ with pm.Model() as mcModel:
         ref_solar_knots=ref_solar_df['t'].values,
         ref_solar=ref_solar_df['Phi fast'].values,
     )
-    idx = len(knots_solar) - len(knots_solar_fine)
     # sm_at_both = pm.math.concatenate(
     #     (
     #         sm_bimod[:idx],
@@ -286,6 +285,7 @@ with pm.Model() as mcModel:
     #     )
     # )
     # pm.Potential('zero_bound', zero_bound)
+    idx = len(knots_solar) - len(knots_solar_fine)
     sm_at_knots = pm.Deterministic(
         'sm_at_knots',
         pm.math.concatenate(
@@ -295,11 +295,16 @@ with pm.Model() as mcModel:
             )
         )
     )
-
     sm_rad = interp1d(
         radData['t'],
         knots_solar,
         sm_at_knots,
+    )
+    # exclude fast component from 10Be data, i.e. use bimod only
+    sm_rad_10Be = interp1d(
+        radData['t'],
+        knots_solar,
+        sm_bimod_at_knots,
     )
     gs_rad = interp(
         radData['t'],
@@ -314,8 +319,8 @@ with pm.Model() as mcModel:
         ),
     )
     # g_2_0 = gs_rad[:, 3]
-    q_GL = prod_Be10(dm, sm_rad)
-    hpa = calc_HPA(gs_rad[:, 3], sm_rad)
+    q_GL = prod_Be10(dm, sm_rad_10Be)
+    hpa = calc_HPA(gs_rad[:, 3], sm_rad_10Be)
 
     q_GL_cal = prod_Be10(fac*abs(gamma_0), mean_solar)
 
