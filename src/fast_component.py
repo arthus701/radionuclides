@@ -9,7 +9,6 @@ class SolarFastComponent():
         self,
         knots_solar,
         tau_solar,
-        n_ref_solar=0,
         ref_solar_knots=None,
         ref_solar=None,
         jitter=1e-4,
@@ -26,34 +25,51 @@ class SolarFastComponent():
         if self.tau == 0:
             self.chol_solar = None
         else:
-            cov_obs = matern_kernel(
-                ref_solar_knots,
-                tau=tau_solar,
-                sigma=200,
-            )
-            cor_obs = matern_kernel(
-                knots_solar,
-                ref_solar_knots,
-                tau=tau_solar,
-                sigma=200,
-            )
-            cov_solar = matern_kernel(
-                self.knots,
-                sigma=200,
-                tau=tau_solar,
-            )
-            _icov_obs = np.linalg.inv(
-                cov_obs + 1e-4*np.eye(len(ref_solar_knots))
-            )
-            prior_mean = cor_obs @ _icov_obs @ ref_solar
-            cov_solar = cov_solar - cor_obs @ _icov_obs @ cor_obs.T
+            if ref_solar_knots is not None:
+                n_ref_solar = len(ref_solar_knots)
 
-            chol_solar = np.linalg.cholesky(
-                cov_solar + self.jitter * np.eye(len(self.knots))
-            )
+                cov_solar = matern_kernel(
+                    self.knots,
+                    sigma=200,
+                    tau=tau_solar,
+                )
+                cov_obs = matern_kernel(
+                    ref_solar_knots,
+                    tau=tau_solar,
+                    sigma=200,
+                )
+                cor_obs = matern_kernel(
+                    knots_solar,
+                    ref_solar_knots,
+                    tau=tau_solar,
+                    sigma=200,
+                )
 
-            self.prior_mean = prior_mean[:-n_ref_solar] / 200
-            self.chol_solar = chol_solar[:-n_ref_solar, :-n_ref_solar] / 200
+                _icov_obs = np.linalg.inv(
+                    cov_obs + 1e-4*np.eye(len(ref_solar_knots))
+                )
+                prior_mean = cor_obs @ _icov_obs @ ref_solar
+                cov_solar = cov_solar - cor_obs @ _icov_obs @ cor_obs.T
+
+                chol_solar = np.linalg.cholesky(
+                    cov_solar + self.jitter * np.eye(len(self.knots))
+                )
+
+                self.prior_mean = prior_mean[:-n_ref_solar] / 200
+                self.chol_solar = \
+                    chol_solar[:-n_ref_solar, :-n_ref_solar] / 200
+            else:
+                self.prior_mean = 0
+
+                cov_solar = matern_kernel(
+                    self.knots,
+                    sigma=1.,
+                    tau=tau_solar,
+                )
+
+                self.chol_solar = np.linalg.cholesky(
+                    cov_solar + self.jitter * np.eye(len(self.knots))
+                )
 
     def get_sm_at_fast(self):
         if self.tau == 0:
