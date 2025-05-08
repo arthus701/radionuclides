@@ -415,7 +415,7 @@ annual_C14_data['C14'] = moving_average(annual_C14_data, 2)
 annual_C14_data = annual_C14_data[annual_C14_data['t'] > -1000]
 
 # XXX
-annual_C14_data['dC14'] = 0.1
+annual_C14_data['dC14'] = 0.01
 
 idxs = radData.query(f't > {min(annual_C14_data["t"])}').index
 radData.loc[idxs, 'C14'] = np.nan
