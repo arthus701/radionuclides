@@ -399,14 +399,27 @@ radData.rename(
     inplace=True,
 )
 
+# annual_C14_data = pd.read_excel(
+#     '../dat/14C_production_rate_tau4.xlsx',
+# )
+# annual_C14_data['t'] = 1950 - annual_C14_data['age yr BP']
+# annual_C14_data.rename(
+#     columns={
+#         'P14 averge ': 'C14',
+#         'P14 1 sigma': 'dC14',
+#     },
+#     inplace=True,
+# )
+# Try using annual data from Brehm et al. (2021)
 annual_C14_data = pd.read_excel(
-    '../dat/14C_production_rate_tau4.xlsx',
+    '../dat/41561_2020_674_MOESM2_ESM.xlsx',
+    sheet_name='Figure1b',
 )
-annual_C14_data['t'] = 1950 - annual_C14_data['age yr BP']
+annual_C14_data.dropna(how='all', inplace=True)
 annual_C14_data.rename(
     columns={
-        'P14 averge ': 'C14',
-        'P14 1 sigma': 'dC14',
+        'ETH Simulated time (yr AD)': 't',
+        'ETH normalized production': 'C14',
     },
     inplace=True,
 )
@@ -414,8 +427,9 @@ annual_C14_data.rename(
 # annual_C14_data['C14'] = moving_average(annual_C14_data, 2)
 annual_C14_data = annual_C14_data[annual_C14_data['t'] > -1000]
 
+annual_C14_data.reset_index(inplace=True, drop=True)
 # XXX
-# annual_C14_data['dC14'] = 0.1
+annual_C14_data['dC14'] = 0.05
 
 idxs = radData.query(f't > {min(annual_C14_data["t"])}').index
 radData.loc[idxs, 'C14'] = np.nan
