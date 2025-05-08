@@ -121,7 +121,7 @@ t_solar_fine = -1100
 t_max = 2000
 step = 50
 step_solar_coarse = 22
-step_solar_fine = 4
+step_solar_fine = 2
 
 # MCMC parameters
 mcmc_params = {
@@ -411,11 +411,11 @@ annual_C14_data.rename(
     inplace=True,
 )
 
-annual_C14_data['C14'] = moving_average(annual_C14_data, 2)
+# annual_C14_data['C14'] = moving_average(annual_C14_data, 2)
 annual_C14_data = annual_C14_data[annual_C14_data['t'] > -1000]
 
 # XXX
-annual_C14_data['dC14'] = 0.01
+# annual_C14_data['dC14'] = 0.1
 
 idxs = radData.query(f't > {min(annual_C14_data["t"])}').index
 radData.loc[idxs, 'C14'] = np.nan
@@ -429,7 +429,7 @@ for _, row in annual_C14_data[['t', 'C14', 'dC14']].iterrows():
     elif len(idx) == 1:
         radData.loc[idx, 'C14'] = row['C14']
         # radData.loc[idx, 'dC14'] = row['dC14']
-        radData.loc[idx, 'dC14'] = 0.1      # * row['C14']
+        radData.loc[idx, 'dC14'] = 0.05      # * np.abs(row['C14'])
     else:
         raise ValueError(f'Multiple entries found for t = {row["t"]}')
 
