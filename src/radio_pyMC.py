@@ -265,7 +265,6 @@ with pm.Model() as mcModel:
     solar_fast = SolarFastComponent(
         knots_solar_fine,
         tau_solar_fast,
-        n_ref_solar=len(ref_solar_df),
         ref_solar_knots=ref_solar_df['t'].values,
         ref_solar=ref_solar_df['Phi fast'].values,
     )
