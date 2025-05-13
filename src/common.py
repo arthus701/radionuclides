@@ -226,6 +226,7 @@ mean_solar = 650
 sigma_solar = 191
 tau_solar = 25.6
 tau_solar_fast = 4
+tau_fast_period = 11.
 
 # Extract variations on regular and fast scale
 solar_constr = pd.read_table(
