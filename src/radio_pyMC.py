@@ -412,6 +412,7 @@ if __name__ == '__main__':
         )
 
     # idata.to_netcdf('../out/radio_result.nc')
-    suffix = f'fast_{tau_solar_fast:d}_'
+    # suffix = f'fast_{tau_solar_fast:d}_'
+    suffix = 'periodic_'
 
     idata.to_netcdf(f'../out/radio_{suffix}result.nc')
