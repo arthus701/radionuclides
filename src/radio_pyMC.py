@@ -43,8 +43,8 @@ from common import (
     prod_C14,
 )
 
-# from fast_component import SolarFastComponent
-from periodic_component import SolarPeriodicComponent
+from fast_component import SolarFastComponent
+# from periodic_component import SolarPeriodicComponent
 
 ref_coeffs = pt.as_tensor(_ref_coeffs)
 base_tensor = pt.as_tensor(base.transpose(1, 0, 2))
@@ -264,19 +264,19 @@ with pm.Model() as mcModel:
     )
 
     # add fast component
-    # solar_fast = SolarFastComponent(
-    #     knots_solar_fine,
-    #     tau_solar_fast,
-    #     ref_solar_knots=ref_solar_df['t'].values,
-    #     ref_solar=ref_solar_df['Phi fast'].values,
-    # )
-    solar_fast = SolarPeriodicComponent(
+    solar_fast = SolarFastComponent(
         knots_solar_fine,
-        period_solar=tau_fast_period,
-        tau_solar=tau_solar_fast,
+        tau_solar_fast,
         ref_solar_knots=ref_solar_df['t'].values,
         ref_solar=ref_solar_df['Phi fast'].values,
     )
+    # solar_fast = SolarPeriodicComponent(
+    #     knots_solar_fine,
+    #     period_solar=tau_fast_period,
+    #     tau_solar=tau_solar_fast,
+    #     ref_solar_knots=ref_solar_df['t'].values,
+    #     ref_solar=ref_solar_df['Phi fast'].values,
+    # )
     # sm_at_both = pm.math.concatenate(
     #     (
     #         sm_bimod[:idx],
@@ -412,7 +412,7 @@ if __name__ == '__main__':
         )
 
     # idata.to_netcdf('../out/radio_result.nc')
-    # suffix = f'fast_{tau_solar_fast:d}_'
-    suffix = 'periodic_'
+    suffix = f'fast_{tau_solar_fast:d}_'
+    # suffix = 'periodic_'
 
     idata.to_netcdf(f'../out/radio_{suffix}result.nc')
