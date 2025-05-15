@@ -61,24 +61,24 @@ class SolarPeriodicComponent():
                 )
 
                 _icov_obs = np.linalg.inv(
-                    cov_obs + 1e-4*np.eye(len(ref_solar_knots))
+                    cov_obs + 2500 * np.eye(len(ref_solar_knots))
                 )
                 prior_mean = cor_obs @ _icov_obs @ ref_solar
                 cov_solar = cov_solar - cor_obs @ _icov_obs @ cor_obs.T
 
                 chol_solar = np.linalg.cholesky(
-                    cov_solar + self.jitter * np.eye(len(self.knots))
+                    cov_solar[:-n_ref_solar, :-n_ref_solar]
+                    + self.jitter * np.eye(len(self.knots) - n_ref_solar)
                 )
 
                 self.prior_mean = prior_mean[:-n_ref_solar] / 200
-                self.chol_solar = \
-                    chol_solar[:-n_ref_solar, :-n_ref_solar] / 200
+                self.chol_solar = chol_solar / 200
             else:
                 self.prior_mean = 0
 
                 cov_solar = cosine_kernel(
                     self.knots,
-                    sigma=200.,
+                    sigma=1.,
                     p=self.period,
                 ) * sqe_kernel(
                     self.knots,
