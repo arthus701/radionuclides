@@ -426,15 +426,25 @@ radData.rename(
 #     inplace=True,
 # )
 # Tau = 1, using Brehm when possible
+# annual_C14_data = pd.read_excel(
+#     '../dat/ProductionRates100Versions.xlsx',
+#     skiprows=7,
+# )
+# annual_C14_data['t'] = 1950 + annual_C14_data['age -yr BP']
+# annual_ensemble = annual_C14_data.values[:, 1:-1]
+# annual_C14_data['C14'] = annual_ensemble.mean(axis=1)
+# annual_C14_data['dC14'] = annual_ensemble.std(axis=1)
+# annual_C14_data.reset_index(inplace=True, drop=True)
+# Tau = 2, using Brehm when possible
 annual_C14_data = pd.read_excel(
-    '../dat/ProductionRates100Versions.xlsx',
+    # '../dat/ProductionRates100Versions.xlsx',
+    '../dat/ProductionRates100Versions_Matern3_2sigma2tau2.xlsx',
     skiprows=7,
 )
 annual_C14_data['t'] = 1950 + annual_C14_data['age -yr BP']
-annual_ensemble = annual_C14_data.values[:, 1:-1]
+annual_ensemble = annual_C14_data.values[:, 5:-1]
 annual_C14_data['C14'] = annual_ensemble.mean(axis=1)
 annual_C14_data['dC14'] = annual_ensemble.std(axis=1)
-annual_C14_data.reset_index(inplace=True, drop=True)
 
 
 # annual_C14_data['C14'] = moving_average(annual_C14_data, 2)
@@ -443,8 +453,8 @@ annual_C14_data = annual_C14_data[annual_C14_data['t'] > -1000]
 annual_C14_data.reset_index(inplace=True, drop=True)
 # XXX
 # annual_C14_data['dC14'] = 0.05
-annual_C14_data['dC14'] = \
-    0.08 * annual_C14_data['dC14'] / annual_C14_data['dC14'].mean()
+# annual_C14_data['dC14'] = \
+#     0.08 * annual_C14_data['dC14'] / annual_C14_data['dC14'].mean()
 
 idxs = radData.query(f't > {min(annual_C14_data["t"])}').index
 radData.loc[idxs, 'C14'] = np.nan
