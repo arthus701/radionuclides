@@ -436,12 +436,15 @@ annual_C14_data['C14'] = annual_ensemble.mean(axis=1)
 annual_C14_data['dC14'] = annual_ensemble.std(axis=1)
 annual_C14_data.reset_index(inplace=True, drop=True)
 
+
 # annual_C14_data['C14'] = moving_average(annual_C14_data, 2)
 annual_C14_data = annual_C14_data[annual_C14_data['t'] > -1000]
 
 annual_C14_data.reset_index(inplace=True, drop=True)
 # XXX
-annual_C14_data['dC14'] = 0.05
+# annual_C14_data['dC14'] = 0.05
+annual_C14_data['dC14'] = \
+    0.08 * annual_C14_data['dC14'] / annual_C14_data['dC14'].mean()
 
 idxs = radData.query(f't > {min(annual_C14_data["t"])}').index
 radData.loc[idxs, 'C14'] = np.nan
