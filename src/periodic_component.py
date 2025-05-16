@@ -74,7 +74,7 @@ class SolarPeriodicComponent():
                 self.prior_mean = prior_mean[:-n_ref_solar] / 200
                 self.chol_solar = chol_solar / 200
             else:
-                self.prior_mean = 0
+                self.prior_mean = np.zeros_like(self.knots)
 
                 cov_solar = cosine_kernel(
                     self.knots,
@@ -113,13 +113,19 @@ class SolarPeriodicComponent():
         sm_fast = damping * sm_fast_scale * (
             self.prior_mean + self.chol_solar @ sm_cent_fast
         )
-        sm_fast_at_knots = pm.Deterministic(
-            'sm_fast_at_knots',
-            pm.math.concatenate(
-                (
-                    sm_fast,
-                    self.ref_solar,
-                ),
+        if self.ref_solar is not None:
+            sm_fast_at_knots = pm.Deterministic(
+                'sm_fast_at_knots',
+                pm.math.concatenate(
+                    (
+                        sm_fast,
+                        self.ref_solar,
+                    ),
+                )
             )
-        )
+        else:
+            sm_fast_at_knots = pm.Deterministic(
+                'sm_fast_at_knots',
+                sm_fast,
+            )
         return sm_fast_at_knots
