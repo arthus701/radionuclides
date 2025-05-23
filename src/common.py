@@ -454,7 +454,7 @@ radData.rename(
 # Periodic kernel, using Brehm when possible
 annual_C14_data = pd.read_excel(
     SCRIPT_DIR
-    + '../dat/ProductionRates100Versions_d14C_MCMC_lp_40_COS_p_cos10_4.xlsx',
+    + '/../dat/ProductionRates100Versions_d14C_MCMC_lp_40_COS_p_cos10_4.xlsx',
     skiprows=7,
 )
 annual_C14_data['t'] = 1950 + annual_C14_data['age -yr BP']
