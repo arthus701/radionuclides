@@ -272,7 +272,8 @@ with pm.Model() as mcModel:
     solar_fast = SolarPeriodicComponent(
         knots_solar_fine,
         period_solar=tau_fast_period,
-        tau_solar=tau_solar,
+        # tau_solar=tau_solar,
+        tau_solar=20.,
         ref_solar_knots=ref_solar_df['t'].values,
         ref_solar=ref_solar_df['Phi fast'].values,
     )

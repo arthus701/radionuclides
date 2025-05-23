@@ -1,6 +1,6 @@
 """ Collection of parameters and settings common to the stan and pyMC approach.
 """
-
+import os
 import numpy as np
 import pandas as pd
 
@@ -13,6 +13,8 @@ from paleokalmag.data_handling import Data
 from pymagglobal.utils import REARTH, lmax2N, i2lm_l    # , scaling
 
 from utils import matern_kernel, moving_average
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 def butter_lowpass_filter(data, cutoff, fs, order=5):
@@ -105,7 +107,10 @@ _taus = [
 ]
 
 
-# with np.load('../dat/hyperparameters.npz', allow_pickle=True) as fh:
+# with np.load(
+# SCRIPT_DIR + '/../dat/hyperparameters.npz',
+# allow_pickle=True,
+# ) as fh:
 #     res = fh['res'].item()
 #
 # gamma_0 = res.x[0]
@@ -200,7 +205,9 @@ for it in range(dip):
 # Set the number of knots to be replaced by the reference model
 n_ref = 3
 
-_Kalmag = np.genfromtxt('../dat/Kalmag_CORE_MEAN_Radius_6371.2.txt')
+_Kalmag = np.genfromtxt(
+    SCRIPT_DIR + '/../dat/Kalmag_CORE_MEAN_Radius_6371.2.txt'
+)
 # Ref coeffs should be of shape (n_coeffs, n_ref)
 ref_coeffs = _Kalmag[1:n_coeffs+1] / 1000
 
@@ -226,11 +233,11 @@ mean_solar = 650
 sigma_solar = 191
 tau_solar = 25.6
 tau_solar_fast = 4
-tau_fast_period = 11.
+tau_fast_period = 10.4
 
 # Extract variations on regular and fast scale
 solar_constr = pd.read_table(
-    '../dat/US10_phi_mon_tab_230907.txt',
+    SCRIPT_DIR + '/../dat/US10_phi_mon_tab_230907.txt',
     sep=r'\s+',
     skiprows=23,
     header=None,
@@ -303,13 +310,13 @@ chol_solar = np.linalg.cholesky(cov_solar+1e-6*np.eye(len(knots_solar)))[
 # -----------------------------------------------------------------------------
 # Data setup
 # with np.load(
-#     '../dat/rejection_list.npz',
+#     SCRIPT_DIR + '/../dat/rejection_list.npz',
 #     allow_pickle=True,
 # ) as fh:
 #     to_reject = fh['to_reject']
 #
 # rawData = read_data(
-#     '../dat/archkalmag_data.csv',
+#     SCRIPT_DIR + '/../dat/archkalmag_data.csv',
 #     rejection_lists=to_reject[:, 0:3],
 # )
 # rawData = rawData.query("dt <= 100")
@@ -372,7 +379,7 @@ age_fix_uids = [
 # rawData.reset_index(inplace=True, drop=True)
 
 rawData = pd.read_csv(
-    '../dat/afm9k2_data.csv',
+    SCRIPT_DIR + '/../dat/afm9k2_data.csv',
 )
 rawData['FID'] = 'from Andreas'
 
@@ -388,7 +395,7 @@ base = dsh_basis(lmax, z_at)
 base = base.reshape(lmax2N(lmax), z_at.shape[1], 3)
 
 radData = pd.read_table(
-    '../dat/CRN_9k_230922.txt'
+    SCRIPT_DIR + '/../dat/CRN_9k_230922.txt'
 )
 radData.rename(
     columns={
@@ -401,7 +408,7 @@ radData.rename(
 )
 # Tau = 4, old as of 2025-05-13
 # annual_C14_data = pd.read_excel(
-#     '../dat/14C_production_rate_tau4.xlsx',
+#     SCRIPT_DIR + '/../dat/14C_production_rate_tau4.xlsx',
 # )
 # annual_C14_data['t'] = 1950 - annual_C14_data['age yr BP']
 # annual_C14_data.rename(
@@ -414,7 +421,7 @@ radData.rename(
 
 # Try using annual data from Brehm et al. (2021)
 # annual_C14_data = pd.read_excel(
-#     '../dat/41561_2020_674_MOESM2_ESM.xlsx',
+#     SCRIPT_DIR + '/../dat/41561_2020_674_MOESM2_ESM.xlsx',
 #     sheet_name='Figure1b',
 # )
 # annual_C14_data.dropna(how='all', inplace=True)
@@ -427,7 +434,7 @@ radData.rename(
 # )
 # Tau = 1, using Brehm when possible
 # annual_C14_data = pd.read_excel(
-#     '../dat/ProductionRates100Versions.xlsx',
+#     SCRIPT_DIR + '/../dat/ProductionRates100Versions.xlsx',
 #     skiprows=7,
 # )
 # annual_C14_data['t'] = 1950 + annual_C14_data['age -yr BP']
@@ -436,16 +443,24 @@ radData.rename(
 # annual_C14_data['dC14'] = annual_ensemble.std(axis=1)
 # annual_C14_data.reset_index(inplace=True, drop=True)
 # Tau = 2, using Brehm when possible
+# annual_C14_data = pd.read_excel(
+#     SCRIPT_DIR + '/../dat/ProductionRates100Versions_Matern3_2sigma2tau2.xlsx',
+#     skiprows=7,
+# )
+# annual_C14_data['t'] = 1950 + annual_C14_data['age -yr BP']
+# annual_ensemble = annual_C14_data.values[:, 5:-1]
+# annual_C14_data['C14'] = annual_ensemble.mean(axis=1)
+# annual_C14_data['dC14'] = annual_ensemble.std(axis=1)
+# Periodic kernel, using Brehm when possible
 annual_C14_data = pd.read_excel(
-    # '../dat/ProductionRates100Versions.xlsx',
-    '../dat/ProductionRates100Versions_Matern3_2sigma2tau2.xlsx',
+    SCRIPT_DIR
+    + '../dat/ProductionRates100Versions_d14C_MCMC_lp_40_COS_p_cos10_4.xlsx',
     skiprows=7,
 )
 annual_C14_data['t'] = 1950 + annual_C14_data['age -yr BP']
-annual_ensemble = annual_C14_data.values[:, 5:-1]
+annual_ensemble = annual_C14_data.values[:, 1:-1]
 annual_C14_data['C14'] = annual_ensemble.mean(axis=1)
 annual_C14_data['dC14'] = annual_ensemble.std(axis=1)
-
 
 # annual_C14_data['C14'] = moving_average(annual_C14_data, 2)
 annual_C14_data = annual_C14_data[annual_C14_data['t'] > -1000]
@@ -454,7 +469,7 @@ annual_C14_data.reset_index(inplace=True, drop=True)
 # XXX
 # annual_C14_data['dC14'] = 0.05
 # annual_C14_data['dC14'] = \
-#     0.08 * annual_C14_data['dC14'] / annual_C14_data['dC14'].mean()
+#     0.05 * annual_C14_data['dC14'] / annual_C14_data['dC14'].min()
 
 idxs = radData.query(f't > {min(annual_C14_data["t"])}').index
 radData.loc[idxs, 'C14'] = np.nan
