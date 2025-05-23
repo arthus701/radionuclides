@@ -100,12 +100,13 @@ class SolarPeriodicComponent():
             sigma=1,
             size=(len(self.prior_mean),),
         )
-        sm_fast_scale = pm.Gamma(
-            'sm_fast_scale',
-            alpha=3,
-            beta=3/200,
-            size=1,
-        )
+        # sm_fast_scale = pm.Gamma(
+        #     'sm_fast_scale',
+        #     alpha=3,
+        #     beta=3/200,
+        #     size=1,
+        # )
+        sm_fast_scale = 200     # MeV
         # damping = pm.math.sigmoid(
         #     0.1 * (self.knots + 100)
         # )
