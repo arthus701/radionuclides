@@ -32,7 +32,7 @@ class SolarPeriodicComponent():
 
                 cov_solar = cosine_kernel(
                     self.knots,
-                    sigma=200.,
+                    sigma=250.,
                     p=self.period,
                 ) * sqe_kernel(
                     self.knots,
@@ -41,7 +41,7 @@ class SolarPeriodicComponent():
                 )
                 cov_obs = cosine_kernel(
                     ref_solar_knots,
-                    sigma=200.,
+                    sigma=250.,
                     p=self.period,
                 ) * sqe_kernel(
                     ref_solar_knots,
@@ -51,7 +51,7 @@ class SolarPeriodicComponent():
                 cor_obs = cosine_kernel(
                     self.knots,
                     ref_solar_knots,
-                    sigma=200.,
+                    sigma=250.,
                     p=self.period,
                 ) * sqe_kernel(
                     self.knots,
@@ -71,8 +71,8 @@ class SolarPeriodicComponent():
                     + self.jitter * np.eye(len(self.knots) - n_ref_solar)
                 )
 
-                self.prior_mean = prior_mean[:-n_ref_solar] / 200
-                self.chol_solar = chol_solar / 200
+                self.prior_mean = prior_mean[:-n_ref_solar] / 250
+                self.chol_solar = chol_solar / 250
             else:
                 self.prior_mean = np.zeros_like(self.knots)
 
@@ -106,7 +106,7 @@ class SolarPeriodicComponent():
         #     beta=3/200,
         #     size=1,
         # )
-        sm_fast_scale = 200     # MeV
+        sm_fast_scale = 250     # MeV
         # damping = pm.math.sigmoid(
         #     0.1 * (self.knots + 100)
         # )
