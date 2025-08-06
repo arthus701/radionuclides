@@ -26,7 +26,7 @@ from common import (
     # beta_nu,
     mean_solar,
     sigma_solar,
-    tau_solar,
+    # tau_solar,
     # tau_solar_fast,
     tau_fast_period,
     knots_solar,
@@ -409,4 +409,4 @@ if __name__ == '__main__':
     # suffix = f'fast_{tau_solar_fast:d}_'
     suffix = 'periodic_'
 
-    idata.to_netcdf(f'../out/radio_{suffix}result.nc')
+    idata.to_netcdf('../out/radio_periodic_result.nc')

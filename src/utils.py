@@ -106,16 +106,6 @@ def matern_kernel(x, y=None, tau=2, sigma=1.):
     return res.reshape(x.shape[0], y.shape[0])
 
 
-def sqe_kernel(x, y=None, tau=2, sigma=1.):
-    if y is None:
-        y = x
-    x = np.asarray(x)
-    y = np.asarray(y)
-    frac = np.abs((x[:, None] - y[None, :])) / tau
-    res = sigma**2 * np.exp(-0.5*frac**2)
-    return res.reshape(x.shape[0], y.shape[0])
-
-
 def quasiperiodic_kernel(x, y=None, tau=2, sigma=1., p=11., gamma=1.):
     # https://arxiv.org/pdf/2207.12164
     if y is None:
@@ -125,6 +115,16 @@ def quasiperiodic_kernel(x, y=None, tau=2, sigma=1., p=11., gamma=1.):
     frac_p = np.pi * np.abs((x[:, None] - y[None, :])) / p
     frac_t = np.abs((x[:, None] - y[None, :])) / tau
     res = sigma**2 * np.exp(-gamma * np.sin(frac_p)**2 - frac_t)
+    return res.reshape(x.shape[0], y.shape[0])
+
+
+def sqe_kernel(x, y=None, tau=2, sigma=1.):
+    if y is None:
+        y = x
+    x = np.asarray(x)
+    y = np.asarray(y)
+    frac = np.abs((x[:, None] - y[None, :])) / tau
+    res = sigma**2 * np.exp(-0.5*frac**2)
     return res.reshape(x.shape[0], y.shape[0])
 
 
