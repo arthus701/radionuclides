@@ -309,79 +309,11 @@ chol_solar = np.linalg.cholesky(cov_solar+1e-6*np.eye(len(knots_solar)))[
 
 # -----------------------------------------------------------------------------
 # Data setup
-# with np.load(
-#     SCRIPT_DIR + '/../dat/rejection_list.npz',
-#     allow_pickle=True,
-# ) as fh:
-#     to_reject = fh['to_reject']
-#
-# rawData = read_data(
-#     SCRIPT_DIR + '/../dat/archkalmag_data.csv',
-#     rejection_lists=to_reject[:, 0:3],
-# )
-# rawData = rawData.query("dt <= 100")
-# rawData = rawData.query(f'{t_min} <= t <= {t_max}')
-# rawData = rawData.sample(n=1000, random_state=161)
-# Test minimal errors.
-# rawData['dD'].where(rawData['dD'] > 10, other=10, inplace=True)
-
-
-# UIDs of non-converging archeo times
-rem_uids = [
-    12064,  # Volcanic from central America, around 1000 BCE
-    12065,  # Volcanic from central America, around 1000 BCE
-    12066,  # Volcanic from central America, around 1000 BCE
-    11064,  # Archeo from central America, around 1000 BCE
-    10942,  # Archeo from central America, around 1000 BCE
-    8568,   # Archeo from central America, around 1000 BCE
-    11049,  # Archeo from central America, around 1000 BCE
-    10962,  # Archeo from central America, around 1000 BCE
-    10982,  # Archeo from central America, around 1000 BCE
-    # 564,    # Hawaii
-    # 8317,   # Seoul
-    # 11402,  # Chuncheon, South Korea
-    # 11035,  # Archeo from central America, 800 CE
-    # 11071,  # Archeo from central America, 800 CE
-    # 11034,  # Archeo from central America, 900 CE
-    # 10926,  # Archeo from central America, 1100 CE
-    # 12099,  # Archeo from Pau d'Alho Cave, Brazil 1189 CE
-]
-
-# for rem in rem_uids:
-#     rawData.drop(
-#         index=rawData.query(f"UID == {rem}").index,
-#         inplace=True,
-#     )
-
-# There's a mistake in GEOMAGIA. Several records from Ecuador are reported with
-# the wrong age, BP was confused with BCE.
-# https://doi.org/10.1016/j.jsames.2020.102733
-age_fix_uids = [
-    13229,
-    13230,
-    13231,
-    13232,
-    13234,
-    13235,
-    13236,
-    13237,
-    13238,
-    13239,
-    13240,
-    13241,
-    13242,
-    13243,
-]
-# for age_fix in age_fix_uids:
-#     idx = rawData.query(f"UID == {age_fix}").index
-#     rawData.loc[idx, 't'] = 1950 + rawData.loc[idx, 't']
-#
-# rawData.reset_index(inplace=True, drop=True)
-
+# thermoremament magnetic data
 rawData = pd.read_csv(
     SCRIPT_DIR + '/../dat/afm9k2_data.csv',
 )
-rawData['FID'] = 'from Andreas'
+rawData['FID'] = 'afm9k.2_data'
 
 data = Data(rawData)
 
@@ -394,6 +326,7 @@ z_at = data.inputs
 base = dsh_basis(lmax, z_at)
 base = base.reshape(lmax2N(lmax), z_at.shape[1], 3)
 
+# radionuclide production rate data
 radData = pd.read_table(
     SCRIPT_DIR + '/../dat/CRN_9k_230922.txt'
 )
@@ -406,42 +339,6 @@ radData.rename(
     },
     inplace=True,
 )
-# Tau = 4, old as of 2025-05-13
-# annual_C14_data = pd.read_excel(
-#     SCRIPT_DIR + '/../dat/14C_production_rate_tau4.xlsx',
-# )
-# annual_C14_data['t'] = 1950 - annual_C14_data['age yr BP']
-# annual_C14_data.rename(
-#     columns={
-#         'P14 averge ': 'C14',
-#         'P14 1 sigma': 'dC14',
-#     },
-#     inplace=True,
-# )
-
-# Try using annual data from Brehm et al. (2021)
-# annual_C14_data = pd.read_excel(
-#     SCRIPT_DIR + '/../dat/41561_2020_674_MOESM2_ESM.xlsx',
-#     sheet_name='Figure1b',
-# )
-# annual_C14_data.dropna(how='all', inplace=True)
-# annual_C14_data.rename(
-#     columns={
-#         'ETH Simulated time (yr AD)': 't',
-#         'ETH normalized production': 'C14',
-#     },
-#     inplace=True,
-# )
-# Tau = 1, using Brehm when possible
-# annual_C14_data = pd.read_excel(
-#     SCRIPT_DIR + '/../dat/ProductionRates100Versions.xlsx',
-#     skiprows=7,
-# )
-# annual_C14_data['t'] = 1950 + annual_C14_data['age -yr BP']
-# annual_ensemble = annual_C14_data.values[:, 1:-1]
-# annual_C14_data['C14'] = annual_ensemble.mean(axis=1)
-# annual_C14_data['dC14'] = annual_ensemble.std(axis=1)
-# annual_C14_data.reset_index(inplace=True, drop=True)
 # Tau = 2, using Brehm when possible
 annual_C14_data = pd.read_excel(
     SCRIPT_DIR
@@ -453,28 +350,11 @@ annual_C14_data['t'] = 1950 + annual_C14_data['age -yr BP']
 annual_ensemble = annual_C14_data.values[:, 5:-1]
 annual_C14_data['C14'] = annual_ensemble.mean(axis=1)
 annual_C14_data['dC14'] = annual_ensemble.std(axis=1)
-
-# Periodic kernel, using Brehm when possible
-# annual_C14_data = pd.read_excel(
-#     SCRIPT_DIR
-#     + '/../dat/'
-#     + 'ProductionRates100Versions_d14C_MCMC_lp_40_COS_p_cos10_4.xlsx',
-#     skiprows=7,
-# )
-# annual_C14_data['t'] = 1950 + annual_C14_data['age -yr BP']
-# annual_ensemble = annual_C14_data.values[:, 1:-1]
-# annual_C14_data['C14'] = annual_ensemble.mean(axis=1)
-# annual_C14_data['dC14'] = annual_ensemble.std(axis=1)
 annual_C14_data['C14'] = moving_average(annual_C14_data, 2)
 
-# annual_C14_data['C14'] = moving_average(annual_C14_data, 2)
 annual_C14_data = annual_C14_data[annual_C14_data['t'] > -1000]
 
 annual_C14_data.reset_index(inplace=True, drop=True)
-# XXX
-# annual_C14_data['dC14'] = 0.05
-# annual_C14_data['dC14'] = \
-#     0.05 * annual_C14_data['dC14'] / annual_C14_data['dC14'].min()
 annual_C14_data['dC14'] = 0.1
 
 idxs = radData.query(f't > {min(annual_C14_data["t"])}').index
@@ -499,13 +379,12 @@ radData = pd.concat(
         radData,
     ],
 )
-# radData['dC14'] = np.nan
 
 radData.sort_values(by='t', inplace=True)
 radData.reset_index(inplace=True, drop=True)
 idx = radData['dC14'].isna()
 radData.loc[idx, 'dC14'] = 0.05     # * np.abs(radData.loc[idx, 'C14'])
-# XXX Use 5 % errors for all C14 records
+# Use 5 % errors for all C14 records
 # radData['dC14'] = 0.05 * np.abs(radData['C14'])
 radData['dBe10_NH'] = 0.1   # * np.abs(radData['Be10_NH'])
 radData['dBe10_SH'] = 0.1   # * np.abs(radData['Be10_SH'])
