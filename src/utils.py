@@ -1,5 +1,8 @@
 import numpy as np
 from numpy import ndarray
+
+import pandas as pd
+
 import jax.numpy as jnp
 from pytensor import tensor as pt, shared
 
@@ -103,6 +106,18 @@ def matern_kernel(x, y=None, tau=2, sigma=1.):
     return res.reshape(x.shape[0], y.shape[0])
 
 
+def quasiperiodic_kernel(x, y=None, tau=2, sigma=1., p=11., gamma=1.):
+    # https://arxiv.org/pdf/2207.12164
+    if y is None:
+        y = x
+    x = np.asarray(x)
+    y = np.asarray(y)
+    frac_p = np.pi * np.abs((x[:, None] - y[None, :])) / p
+    frac_t = np.abs((x[:, None] - y[None, :])) / tau
+    res = sigma**2 * np.exp(-gamma * np.sin(frac_p)**2 - frac_t)
+    return res.reshape(x.shape[0], y.shape[0])
+
+
 def sqe_kernel(x, y=None, tau=2, sigma=1.):
     if y is None:
         y = x
@@ -111,3 +126,58 @@ def sqe_kernel(x, y=None, tau=2, sigma=1.):
     frac = np.abs((x[:, None] - y[None, :])) / tau
     res = sigma**2 * np.exp(-0.5*frac**2)
     return res.reshape(x.shape[0], y.shape[0])
+
+
+def cosine_kernel(x, y=None, sigma=1., p=11.):
+    if y is None:
+        y = x
+    x = np.asarray(x)
+    y = np.asarray(y)
+    frac_p = np.pi * np.abs((x[:, None] - y[None, :])) / p
+    res = sigma**2 * np.cos(frac_p)**2
+    return res.reshape(x.shape[0], y.shape[0])
+
+
+def periodic_kernel(x, y=None, tau=2, sigma=1., p=11.):
+    # https://arxiv.org/pdf/2207.12164
+    if y is None:
+        y = x
+    x = np.asarray(x)
+    y = np.asarray(y)
+    frac_p = np.pi * np.abs((x[:, None] - y[None, :])) / p
+    res = sigma**2 * np.exp(-2 / tau**2 * np.sin(frac_p)**2)
+    return res.reshape(x.shape[0], y.shape[0])
+
+
+def bin_average(df, window):
+    bins = []
+    avg_values = []
+    current_bin = df['t'].max()
+    while current_bin > df['t'].min():
+        mask = (
+            (df['t'] >= current_bin - window / 2)
+            & (df['t'] <= current_bin + window / 2)
+        )
+        bins.append(current_bin)
+        avg_values.append(df.loc[mask, 'C14'].mean())
+        current_bin -= window
+
+    return pd.DataFrame(
+        data={
+            't': bins,
+            'C14': avg_values,
+        }
+    )
+
+
+def moving_average(df, window, key='C14'):
+    avg_values = []
+    for i in range(len(df)):
+        x_center = df.loc[i, 't']
+        mask = (
+            (df['t'] >= x_center - window / 2)
+            & (df['t'] <= x_center + window / 2)
+        )
+        avg_values.append(df.loc[mask, key].mean())
+
+    return np.array(avg_values)

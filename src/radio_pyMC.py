@@ -1,4 +1,3 @@
-import sys
 import numpy as np
 
 import pymc as pm
@@ -27,9 +26,13 @@ from common import (
     # beta_nu,
     mean_solar,
     sigma_solar,
+    # tau_solar,
+    # tau_solar_fast,
+    tau_fast_period,
     knots_solar,
+    knots_solar_fine,
     n_ref_solar,
-    ref_solar,
+    ref_solar_df,
     chol_solar,
     prior_mean_solar,
     radData,
@@ -41,16 +44,12 @@ from common import (
     prod_C14,
 )
 
-from longterm_component import SolarLongtermComponent
+# from fast_component import SolarFastComponent
+from periodic_component import SolarPeriodicComponent
 
 ref_coeffs = pt.as_tensor(_ref_coeffs)
 base_tensor = pt.as_tensor(base.transpose(1, 0, 2))
 fac = 0.63712**3
-
-try:
-    tau_solar_longterm = int(sys.argv[1])
-except IndexError:
-    tau_solar_longterm = None
 
 
 with pm.Model() as mcModel:
@@ -178,11 +177,6 @@ with pm.Model() as mcModel:
         size=(len(knots_solar)-n_ref_solar,),
     )
 
-    s_fac = pm.Normal(
-        's_fac',
-        sigma=1.,
-        size=3,
-    )
     # correlated samples
     sm_at = chol_solar @ sm_cent + prior_mean_solar
 
@@ -253,44 +247,66 @@ with pm.Model() as mcModel:
         )
     )
 
-    sm_at_bimod = interp1d(
+    sm_bimod = interp1d(
         sm_at_uniform,
         cdf,
         inverse_approx,
     )
-
-    # add longterm component
-    solar_longterm = SolarLongtermComponent(
-        knots_solar,
-        tau_solar_longterm,
-        n_ref_solar=n_ref_solar,
-    )
-    sm_at_both = sm_at_bimod + solar_longterm.get_sm_at_longterm()
-
-    # penalize smaller than zero
-    zero_bound = pm.math.sum(
-        pm.math.log(
-            pm.math.sigmoid(
-                1e-2 * (sm_at_both - 150)
-            )
-        )
-    )
-    pm.Potential('zero_bound', zero_bound)
-
-    sm_at_knots = pm.Deterministic(
-        'sm_at_knots',
+    sm_bimod_at_knots = pm.Deterministic(
+        'sm_bimod_at_knots',
         pm.math.concatenate(
             (
-                sm_at_both,
-                ref_solar,
+                sm_bimod,
+                ref_solar_df['Phi avg.'].values,
             ),
         ),
     )
 
+    # add fast component
+    # solar_fast = SolarFastComponent(
+    #     knots_solar_fine,
+    #     tau_solar_fast,
+    #     ref_solar_knots=ref_solar_df['t'].values,
+    #     ref_solar=ref_solar_df['Phi fast'].values,
+    # )
+    solar_fast = SolarPeriodicComponent(
+        knots_solar_fine,
+        period_solar=tau_fast_period,
+        # tau_solar=tau_solar,
+        tau_solar=20.,
+        ref_solar_knots=ref_solar_df['t'].values,
+        ref_solar=ref_solar_df['Phi fast'].values,
+    )
+
+    # penalize smaller than zero
+    # zero_bound = pm.math.sum(
+    #     pm.math.log(
+    #         pm.math.sigmoid(
+    #             1e-1 * (sm_bimod - 150)
+    #         )
+    #     )
+    # )
+    # pm.Potential('zero_bound', zero_bound)
+    idx = len(knots_solar) - len(knots_solar_fine)
+    sm_at_knots = pm.Deterministic(
+        'sm_at_knots',
+        pm.math.concatenate(
+            (
+                sm_bimod_at_knots[:idx],
+                sm_bimod_at_knots[idx:] + solar_fast.get_sm_at_fast(),
+            )
+        )
+    )
     sm_rad = interp1d(
         radData['t'],
         knots_solar,
         sm_at_knots,
+    )
+    # exclude fast component from 10Be data, i.e. use bimod only
+    sm_rad_10Be = interp1d(
+        radData['t'],
+        knots_solar,
+        sm_bimod_at_knots,
     )
     gs_rad = interp(
         radData['t'],
@@ -305,14 +321,19 @@ with pm.Model() as mcModel:
         ),
     )
     # g_2_0 = gs_rad[:, 3]
-    q_GL = prod_Be10(dm, sm_rad)
-    hpa = calc_HPA(gs_rad[:, 3], sm_rad)
+    q_GL = prod_Be10(dm, sm_rad_10Be)
+    hpa = calc_HPA(gs_rad[:, 3], sm_rad_10Be)
 
     q_GL_cal = prod_Be10(fac*abs(gamma_0), mean_solar)
 
     q_C14 = prod_C14(dm, sm_rad)
     q_C14_cal = prod_C14(fac*abs(gamma_0), mean_solar)
 
+    s_fac = pm.Normal(
+        's_fac',
+        sigma=1.,
+        size=3,
+    )
     # XXX Parametrize the 0.1
     cal_nh = q_GL_cal * (1 + s_fac[0]*0.05)
     cal_sh = q_GL_cal * (1 + s_fac[1]*0.05)
@@ -324,7 +345,7 @@ with pm.Model() as mcModel:
         (
             (q_GL * (1 + hpa / 2.))[idx_NH] / cal_nh
             - radData.loc[idx_NH, 'Be10_NH'].values
-        ) / 0.1,
+        ) / radData.loc[idx_NH, 'dBe10_NH'].values,
     )
     be10_nh_obs = pm.Normal(
         'Be10_NH',
@@ -339,7 +360,7 @@ with pm.Model() as mcModel:
         (
             (q_GL * (1 - hpa / 2.))[idx_SH] / cal_sh
             - radData.loc[idx_SH, 'Be10_SH'].values
-        ) / 0.1,
+        ) / radData.loc[idx_SH, 'dBe10_SH'].values,
     )
     be10_sh_obs = pm.Normal(
         'Be10_SH',
@@ -354,7 +375,7 @@ with pm.Model() as mcModel:
         (
             q_C14[idx_GL] / cal_c14
             - radData.loc[idx_GL, 'C14'].values
-        ) / 0.05,
+        ) / radData.loc[idx_GL, 'dC14'].values,
     )
     c14_obs = pm.Normal(
         'C14',
@@ -368,7 +389,7 @@ with pm.Model() as mcModel:
 if __name__ == '__main__':
     from common import mcmc_params
     from pymc.sampling import jax as pmj
-    from numpyro.infer.initialization import init_to_mean
+    from numpyro.infer.initialization import init_to_median
 
     with mcModel:
         idata = pmj.sample_numpyro_nuts(
@@ -380,15 +401,12 @@ if __name__ == '__main__':
             target_accept=mcmc_params['target_accept'],
             postprocessing_backend='cpu',
             nuts_kwargs={
-                'init_strategy': init_to_mean,
+                'init_strategy': init_to_median,
             },
         )
 
     # idata.to_netcdf('../out/radio_result.nc')
-    suffix = ''
-    if tau_solar_longterm is None:
-        suffix += 'longterm_'
-    elif tau_solar_longterm != 0:
-        suffix += f'longterm_{tau_solar_longterm:d}_'
+    # suffix = f'fast_{tau_solar_fast:d}_'
+    suffix = 'periodic_'
 
-    idata.to_netcdf(f'../out/radio_{suffix}result.nc')
+    idata.to_netcdf('../out/radio_periodic_result.nc')

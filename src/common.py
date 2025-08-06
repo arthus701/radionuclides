@@ -1,8 +1,8 @@
 """ Collection of parameters and settings common to the stan and pyMC approach.
 """
-from pathlib import Path
+import os
 import numpy as np
-from pandas import read_table, cut, read_csv
+import pandas as pd
 
 from scipy.signal import butter, sosfiltfilt
 
@@ -12,9 +12,9 @@ from paleokalmag.data_handling import Data
 
 from pymagglobal.utils import REARTH, lmax2N, i2lm_l    # , scaling
 
-from utils import matern_kernel
+from utils import matern_kernel, moving_average
 
-path = str(Path(__file__).parent) + '/'
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 def butter_lowpass_filter(data, cutoff, fs, order=5):
@@ -107,7 +107,10 @@ _taus = [
 ]
 
 
-# with np.load('../dat/hyperparameters.npz', allow_pickle=True) as fh:
+# with np.load(
+# SCRIPT_DIR + '/../dat/hyperparameters.npz',
+# allow_pickle=True,
+# ) as fh:
 #     res = fh['res'].item()
 #
 # gamma_0 = res.x[0]
@@ -119,9 +122,11 @@ _taus = [
 
 # Range and resolution
 t_min = -7000
+t_solar_fine = -1100
 t_max = 2000
 step = 50
-step_solar = 22
+step_solar_coarse = 22
+step_solar_fine = 2
 
 # MCMC parameters
 mcmc_params = {
@@ -148,12 +153,25 @@ knots = np.arange(
     t_max + step,
     step,
 )
-knots_solar = np.flip(
+knots_solar_fine = np.flip(
     np.arange(
-        t_max + step_solar,
-        t_min,
-        -step_solar,
+        t_max,
+        t_solar_fine-step_solar_fine,
+        -step_solar_fine,
     )
+)
+knots_solar_coarse = np.flip(
+    np.arange(
+        t_solar_fine-step_solar_coarse,
+        t_min-step_solar_coarse,
+        -step_solar_coarse,
+    )
+)
+knots_solar = np.hstack(
+    [
+        knots_solar_coarse,
+        knots_solar_fine,
+    ],
 )
 
 # -----------------------------------------------------------------------------
@@ -187,7 +205,9 @@ for it in range(dip):
 # Set the number of knots to be replaced by the reference model
 n_ref = 3
 
-_Kalmag = np.genfromtxt(path + '../dat/Kalmag_CORE_MEAN_Radius_6371.2.txt')
+_Kalmag = np.genfromtxt(
+    SCRIPT_DIR + '/../dat/Kalmag_CORE_MEAN_Radius_6371.2.txt'
+)
 # Ref coeffs should be of shape (n_coeffs, n_ref)
 ref_coeffs = _Kalmag[1:n_coeffs+1] / 1000
 
@@ -209,12 +229,15 @@ prior_mean = prior_mean[:, :len(knots)-n_ref]
 # Solar modulation model
 # Check multimodal prior
 # Set higher (~600) to check for less variation
-mean_solar = 550
+mean_solar = 650
 sigma_solar = 191
 tau_solar = 25.6
+tau_solar_fast = 4
+tau_fast_period = 10.4
 
-solar_constr = read_table(
-    path + '../dat/US10_phi_mon_tab_230907.txt',
+# Extract variations on regular and fast scale
+solar_constr = pd.read_table(
+    SCRIPT_DIR + '/../dat/US10_phi_mon_tab_230907.txt',
     sep=r'\s+',
     skiprows=23,
     header=None,
@@ -225,8 +248,13 @@ solar_constr = read_table(
         'Phi (MV)',
     ],
 )
-bins = knots_solar[-6:]+11
-solar_constr['Interval'] = cut(solar_constr['Year'], bins)
+
+idx_solar = np.argmin(
+    np.abs(solar_constr['Year'].min() - knots_solar)
+).flatten()
+ref_min = knots_solar[idx_solar].item() - step_solar_fine / 2
+bins = np.arange(ref_min, t_max+step_solar_fine, step_solar_fine)
+solar_constr['Interval'] = pd.cut(solar_constr['Year'], bins)
 
 ref_solar_years = []
 ref_solar = []
@@ -238,18 +266,25 @@ for group in solar_constr.groupby('Interval', observed=True):
 ref_solar_years = np.array(ref_solar_years)
 ref_solar = np.array(ref_solar)
 
-t_const = min(ref_solar_years)
-ind_const = np.argmax(t_const <= knots_solar)
-n_ref_solar = len(knots_solar) - ind_const
+ref_solar_df = pd.DataFrame(
+    data={
+        't': ref_solar_years,
+        'Phi': ref_solar,
+    }
+)
+ref_solar_df['Phi avg.'] = moving_average(ref_solar_df, tau_solar, key='Phi')
+ref_solar_df['Phi fast'] = ref_solar_df['Phi'] - ref_solar_df['Phi avg.']
+
+n_ref_solar = len(ref_solar_df)
 
 cov_obs = matern_kernel(
-    ref_solar_years,
+    ref_solar_df['t'].values,
     tau=tau_solar,
     sigma=sigma_solar,
 )
 cor_obs = matern_kernel(
     knots_solar,
-    ref_solar_years,
+    ref_solar_df['t'].values,
     tau=tau_solar,
     sigma=sigma_solar,
 )
@@ -259,9 +294,9 @@ cov_solar = matern_kernel(
     sigma=sigma_solar,
 )
 
-_icov_obs = np.linalg.inv(cov_obs + 1e-4*np.eye(len(ref_solar_years)))
+_icov_obs = np.linalg.inv(cov_obs + 1e-4*np.eye(len(ref_solar_df['t'].values)))
 prior_mean_solar = mean_solar + cor_obs @ _icov_obs @ \
-    (ref_solar - mean_solar)
+    (ref_solar_df['Phi avg.'] - mean_solar)
 cov_solar = cov_solar - cor_obs @ _icov_obs @ cor_obs.T
 
 # prior_mean_solar = np.ones(len(knots_solar)) * mean_solar
@@ -275,13 +310,13 @@ chol_solar = np.linalg.cholesky(cov_solar+1e-6*np.eye(len(knots_solar)))[
 # -----------------------------------------------------------------------------
 # Data setup
 # with np.load(
-#     '../dat/rejection_list.npz',
+#     SCRIPT_DIR + '/../dat/rejection_list.npz',
 #     allow_pickle=True,
 # ) as fh:
 #     to_reject = fh['to_reject']
 #
 # rawData = read_data(
-#     '../dat/archkalmag_data.csv',
+#     SCRIPT_DIR + '/../dat/archkalmag_data.csv',
 #     rejection_lists=to_reject[:, 0:3],
 # )
 # rawData = rawData.query("dt <= 100")
@@ -343,8 +378,8 @@ age_fix_uids = [
 #
 # rawData.reset_index(inplace=True, drop=True)
 
-rawData = read_csv(
-    path + '../dat/afm9k2_data.csv',
+rawData = pd.read_csv(
+    SCRIPT_DIR + '/../dat/afm9k2_data.csv',
 )
 rawData['FID'] = 'from Andreas'
 
@@ -359,8 +394,8 @@ z_at = data.inputs
 base = dsh_basis(lmax, z_at)
 base = base.reshape(lmax2N(lmax), z_at.shape[1], 3)
 
-radData = read_table(
-    path + '../dat/CRN_9k_230922.txt'
+radData = pd.read_table(
+    SCRIPT_DIR + '/../dat/CRN_9k_230922.txt'
 )
 radData.rename(
     columns={
@@ -371,7 +406,145 @@ radData.rename(
     },
     inplace=True,
 )
+# Tau = 4, old as of 2025-05-13
+# annual_C14_data = pd.read_excel(
+#     SCRIPT_DIR + '/../dat/14C_production_rate_tau4.xlsx',
+# )
+# annual_C14_data['t'] = 1950 - annual_C14_data['age yr BP']
+# annual_C14_data.rename(
+#     columns={
+#         'P14 averge ': 'C14',
+#         'P14 1 sigma': 'dC14',
+#     },
+#     inplace=True,
+# )
+
+# Try using annual data from Brehm et al. (2021)
+# annual_C14_data = pd.read_excel(
+#     SCRIPT_DIR + '/../dat/41561_2020_674_MOESM2_ESM.xlsx',
+#     sheet_name='Figure1b',
+# )
+# annual_C14_data.dropna(how='all', inplace=True)
+# annual_C14_data.rename(
+#     columns={
+#         'ETH Simulated time (yr AD)': 't',
+#         'ETH normalized production': 'C14',
+#     },
+#     inplace=True,
+# )
+# Tau = 1, using Brehm when possible
+# annual_C14_data = pd.read_excel(
+#     SCRIPT_DIR + '/../dat/ProductionRates100Versions.xlsx',
+#     skiprows=7,
+# )
+# annual_C14_data['t'] = 1950 + annual_C14_data['age -yr BP']
+# annual_ensemble = annual_C14_data.values[:, 1:-1]
+# annual_C14_data['C14'] = annual_ensemble.mean(axis=1)
+# annual_C14_data['dC14'] = annual_ensemble.std(axis=1)
+# annual_C14_data.reset_index(inplace=True, drop=True)
+# Tau = 2, using Brehm when possible
+annual_C14_data = pd.read_excel(
+    SCRIPT_DIR
+    + '/../dat/'
+    + 'ProductionRates100Versions_Matern3_2sigma2tau2.xlsx',
+    skiprows=7,
+)
+annual_C14_data['t'] = 1950 + annual_C14_data['age -yr BP']
+annual_ensemble = annual_C14_data.values[:, 5:-1]
+annual_C14_data['C14'] = annual_ensemble.mean(axis=1)
+annual_C14_data['dC14'] = annual_ensemble.std(axis=1)
+
+# Periodic kernel, using Brehm when possible
+# annual_C14_data = pd.read_excel(
+#     SCRIPT_DIR
+#     + '/../dat/'
+#     + 'ProductionRates100Versions_d14C_MCMC_lp_40_COS_p_cos10_4.xlsx',
+#     skiprows=7,
+# )
+# annual_C14_data['t'] = 1950 + annual_C14_data['age -yr BP']
+# annual_ensemble = annual_C14_data.values[:, 1:-1]
+# annual_C14_data['C14'] = annual_ensemble.mean(axis=1)
+# annual_C14_data['dC14'] = annual_ensemble.std(axis=1)
+annual_C14_data['C14'] = moving_average(annual_C14_data, 2)
+
+# annual_C14_data['C14'] = moving_average(annual_C14_data, 2)
+annual_C14_data = annual_C14_data[annual_C14_data['t'] > -1000]
+
+annual_C14_data.reset_index(inplace=True, drop=True)
+# XXX
+# annual_C14_data['dC14'] = 0.05
+# annual_C14_data['dC14'] = \
+#     0.05 * annual_C14_data['dC14'] / annual_C14_data['dC14'].min()
+annual_C14_data['dC14'] = 0.1
+
+idxs = radData.query(f't > {min(annual_C14_data["t"])}').index
+radData.loc[idxs, 'C14'] = np.nan
+radData['dC14'] = np.nan
+merge_rows = []
+for _, row in annual_C14_data[['t', 'C14', 'dC14']].iterrows():
+    # try:
+    idx = radData.query(f't == {row["t"]}').index
+    if 0 == len(idx):
+        merge_rows.append(row)
+    elif len(idx) == 1:
+        radData.loc[idx, 'C14'] = row['C14']
+        # radData.loc[idx, 'dC14'] = row['dC14']
+        radData.loc[idx, 'dC14'] = 0.05      # * np.abs(row['C14'])
+    else:
+        raise ValueError(f'Multiple entries found for t = {row["t"]}')
+
+radData = pd.concat(
+    [
+        pd.DataFrame(merge_rows),
+        radData,
+    ],
+)
+# radData['dC14'] = np.nan
+
+radData.sort_values(by='t', inplace=True)
+radData.reset_index(inplace=True, drop=True)
+idx = radData['dC14'].isna()
+radData.loc[idx, 'dC14'] = 0.05     # * np.abs(radData.loc[idx, 'C14'])
+# XXX Use 5 % errors for all C14 records
+# radData['dC14'] = 0.05 * np.abs(radData['C14'])
+radData['dBe10_NH'] = 0.1   # * np.abs(radData['Be10_NH'])
+radData['dBe10_SH'] = 0.1   # * np.abs(radData['Be10_SH'])
+
+# exclude solar storm
+idx = radData.query('773.5 <= t and t <= 775.5').index
+radData.loc[idx, 'C14'] = np.nan
 
 idx_GL = np.asarray(radData.query('C14 == C14').index, dtype=int)
 idx_NH = np.asarray(radData.query('Be10_NH == Be10_NH').index, dtype=int)
 idx_SH = np.asarray(radData.query('Be10_SH == Be10_SH').index, dtype=int)
+
+
+if __name__ == '__main__':
+    from matplotlib import pyplot as plt
+
+    fig, ax = plt.subplots(
+        1, 1,
+        figsize=(10, 5),
+    )
+
+    ax.errorbar(
+        radData['t'],
+        radData['C14'],
+        yerr=radData['dC14'],
+        ls='',
+        color='grey',
+        alpha=0.3,
+    )
+    ax.scatter(
+        radData['t'],
+        radData['C14'],
+        ls='',
+        color='grey',
+        marker='.',
+    )
+    ax.set_xlabel('time [yrs.]')
+    ax.set_ylabel('$^{14}$C production (normalized)')
+
+    fig.tight_layout()
+
+    plt.show()
