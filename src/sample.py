@@ -7,7 +7,6 @@ from pytensor import tensor as pt
 from utils import interp, interp1d
 
 from parameters import (
-    suffix,
     fix_calibration,
     use_longterm,
     use_11year_cycle,
@@ -430,9 +429,10 @@ with pm.Model() as mcModel:
 
 
 if __name__ == '__main__':
-    from parameters import mcmc_params
     from pymc.sampling import jax as pmj
     from numpyro.infer.initialization import init_to_median
+
+    from parameters import mcmc_params, prefix
 
     with mcModel:
         idata = pmj.sample_numpyro_nuts(
@@ -448,4 +448,4 @@ if __name__ == '__main__':
             },
         )
 
-    idata.to_netcdf(f'../out/radio_{suffix}result.nc')
+    idata.to_netcdf(f'../out/{prefix}result.nc')

@@ -11,7 +11,7 @@ from common import (
 try:
     prefix = sys.argv[1]
 except IndexError:
-    prefix = "radio"
+    from parameters import prefix
 
 iData = az.InferenceData.from_netcdf(
     f'../out/{prefix}_result.nc',
