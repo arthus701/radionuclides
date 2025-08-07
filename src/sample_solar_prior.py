@@ -45,7 +45,7 @@ with pm.Model() as mcModel:
     )
 
     # transform to correlated bimodal via inverse cdf
-    kappa = 0.15
+    kappa = 0.
     # tL_cent = pm.HalfNormal(
     #     'tL_cent',
     #     sigma=1.,
@@ -116,7 +116,8 @@ with pm.Model() as mcModel:
     #     beta=3/200,
     #     size=1,
     # )
-    # sm_at_longterm = sm_longterm_scale * chol_solar_longterm @ sm_cent_longterm
+    # sm_at_longterm = sm_longterm_scale * chol_solar_longterm
+    # @ sm_cent_longterm
     sm_at_both = sm_at_bimod
 
     # penalize smaller than zero
@@ -166,5 +167,5 @@ if __name__ == '__main__':
         )
 
     idata.to_netcdf(
-        f'../dat/solar_prior_kappa_{kappa:.2f}_result.nc'
+        f'../out/solar_prior_kappa_{kappa:.2f}_result.nc'
     )

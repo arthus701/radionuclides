@@ -1,4 +1,4 @@
-# import sys
+import sys
 import numpy as np
 
 import arviz as az
@@ -9,15 +9,8 @@ from matplotlib.gridspec import GridSpec
 from scipy.stats import beta
 from styles import setup
 
-# sys.path.insert(1, '../src/')
-# from common import knots_solar, n_ref_solar
-# prior sampling was run with different knot spacing
-# change after re-run
-prefix = 'radio_longterm'
-
-with np.load(f'../out/{prefix}_ensemble.npz') as fh:
-    knots_solar = fh['knots_solar']
-n_ref_solar = 5
+sys.path.insert(1, '../src/')
+from common import knots_solar, n_ref_solar
 
 setup()
 
@@ -91,7 +84,11 @@ for it, kappa in enumerate(kappas):
     )
 
     hist_axs[it].hist(
-        1.025 * iData.posterior['sm_at_knots'].values[:, :, :-n_ref_solar].flatten() + 24.18,
+        1.025 * (
+            iData.posterior['sm_at_knots']
+            .values[:, :, :-n_ref_solar]
+            .flatten()
+        ) + 24.18,
         bins=np.linspace(100, 1100, 51),
     )
 
