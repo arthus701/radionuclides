@@ -306,16 +306,18 @@ if use_11year_cycle:
             pd.DataFrame(merge_rows),
             radData,
         ],
-    )
+        )
+    idx = radData['dC14'].isna()
+    radData.loc[idx, 'dC14'] = 0.05     # * np.abs(radData.loc[idx, 'C14'])
+else:
+    # Use 5 % errors for all C14 records
+    radData['dC14'] = 0.05 * np.abs(radData['C14'])
+
+radData['dBe10_NH'] = 0.1   # * np.abs(radData['Be10_NH'])
+radData['dBe10_SH'] = 0.1   # * np.abs(radData['Be10_SH'])
 
 radData.sort_values(by='t', inplace=True)
 radData.reset_index(inplace=True, drop=True)
-idx = radData['dC14'].isna()
-radData.loc[idx, 'dC14'] = 0.05     # * np.abs(radData.loc[idx, 'C14'])
-# Use 5 % errors for all C14 records
-# radData['dC14'] = 0.05 * np.abs(radData['C14'])
-radData['dBe10_NH'] = 0.1   # * np.abs(radData['Be10_NH'])
-radData['dBe10_SH'] = 0.1   # * np.abs(radData['Be10_SH'])
 
 # exclude solar storm
 idx = radData.query('773.5 <= t and t <= 775.5').index
