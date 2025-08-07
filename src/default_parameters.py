@@ -27,14 +27,14 @@ alpha_dip = 10
 omega = 1/741
 chi = 1/138
 xi = np.sqrt(chi**2 - omega**2)
-_alphas = [
+alpha_list = [
     3.5,
     1.765,
     1.011,
     0.455,
     0.177,
 ]
-_taus = [
+tau_list = [
     200,
     133,
     174,
