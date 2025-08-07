@@ -10,9 +10,31 @@ from paleokalmag.utils import dsh_basis
 from paleokalmag.data_handling import Data
 # from paleokalmag.data_handling import read_data
 
-from pymagglobal.utils import REARTH, lmax2N, i2lm_l    # , scaling
+from pymagglobal.utils import lmax2N, i2lm_l    # , scaling
 
 from utils import matern_kernel, moving_average
+
+from parameters import (
+    lmax,
+    t_min,
+    t_max,
+    step,
+    t_solar_fine,
+    step_solar_coarse,
+    step_solar_fine,
+    gamma_0,
+    alpha_list,
+    tau_list,
+    dip,
+    alpha_dip,
+    omega,
+    xi,
+    chi,
+    mu_solar,
+    sigma_solar,
+    tau_solar,
+    use_11year_cycle,
+)
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -58,94 +80,6 @@ def prod_Be10(dm, phi):
     return Q
 
 
-# -----------------------------------------------------------------------------
-# Model parameters
-# GP Settings
-lmax = 5
-# R = 2800
-
-# 2023-11-22
-# New parameters, estimated with cleaned dataset and gradients
-# dip = 3
-# R = 2800
-# gamma_0 = -32.79
-# alpha_dip = 39.60
-# omega = 1 / 153.08602220031185
-# xi = 1 / 48.71563374353433
-# chi = np.sqrt(xi**2 + omega**2)
-# alpha_wodip = 94.54
-# tau_wodip = 513.9
-#
-# scl = np.flip(np.unique(scaling(R, REARTH, lmax)))
-# _alphas = np.ones(lmax) * alpha_wodip
-# _alphas *= scl
-# alpha_dip *= scl[0]
-# _taus = tau_wodip / (np.arange(lmax)+1)
-
-# 2023-09-13
-# Try two parameter axial dipole, pfm9k.2 parameters
-dip = 1
-R = REARTH
-gamma_0 = -32.5
-alpha_dip = 10
-omega = 1/741
-chi = 1/138
-xi = np.sqrt(chi**2 - omega**2)
-_alphas = [
-    3.5,
-    1.765,
-    1.011,
-    0.455,
-    0.177,
-]
-_taus = [
-    200,
-    133,
-    174,
-    138,
-    95,
-]
-
-
-# with np.load(
-# SCRIPT_DIR + '/../dat/hyperparameters.npz',
-# allow_pickle=True,
-# ) as fh:
-#     res = fh['res'].item()
-#
-# gamma_0 = res.x[0]
-# alpha_dip = res.x[1]
-# tau_dip = res.x[2]
-# alpha_wodip = res.x[3]
-# tau_wodip = res.x[4]
-# rho = res.x[5]
-
-# Range and resolution
-t_min = -7000
-t_solar_fine = -1100
-t_max = 2000
-step = 50
-step_solar_coarse = 22
-step_solar_fine = 2
-
-# MCMC parameters
-mcmc_params = {
-    'n_samps': 500,
-    'n_warmup': 1000,
-    'n_chains': 4,
-    'target_accept': 0.95,
-}
-
-# Other parameters
-# tDir = (3.4 + 2) * 57.3 / 140   # Directional truncation error in Deg.
-# tDir = 1.4                    # smaller value after investigation
-# tInt = 2.                       # Intensity truncation error in uT
-# set to zero when using Andreas' dataset
-tDir = 0
-tInt = 0
-alpha_nu = 2.
-beta_nu = 0.1
-
 # Derived parameters
 n_coeffs = lmax2N(lmax)
 knots = np.arange(
@@ -180,8 +114,8 @@ knots_solar = np.hstack(
 prior_mean = np.zeros((n_coeffs, len(knots)))
 prior_mean[0] = gamma_0
 
-alphas = np.array([_alphas[i2lm_l(it)-1]**2 for it in range(n_coeffs)])
-taus = np.array([_taus[i2lm_l(it)-1] for it in range(n_coeffs)])
+alphas = np.array([alpha_list[i2lm_l(it)-1]**2 for it in range(n_coeffs)])
+taus = np.array([tau_list[i2lm_l(it)-1] for it in range(n_coeffs)])
 
 alphas[0:dip] = alpha_dip**2
 taus[0:dip] = 1 / omega
@@ -227,13 +161,6 @@ for it in range(n_coeffs):
 prior_mean = prior_mean[:, :len(knots)-n_ref]
 # -----------------------------------------------------------------------------
 # Solar modulation model
-# Check multimodal prior
-# Set higher (~600) to check for less variation
-mean_solar = 650
-sigma_solar = 191
-tau_solar = 25.6
-tau_solar_fast = 4
-tau_fast_period = 10.4
 
 # Extract variations on regular and fast scale
 solar_constr = pd.read_table(
@@ -295,8 +222,8 @@ cov_solar = matern_kernel(
 )
 
 _icov_obs = np.linalg.inv(cov_obs + 1e-4*np.eye(len(ref_solar_df['t'].values)))
-prior_mean_solar = mean_solar + cor_obs @ _icov_obs @ \
-    (ref_solar_df['Phi avg.'] - mean_solar)
+prior_mean_solar = mu_solar + cor_obs @ _icov_obs @ \
+    (ref_solar_df['Phi avg.'] - mu_solar)
 cov_solar = cov_solar - cor_obs @ _icov_obs @ cor_obs.T
 
 # prior_mean_solar = np.ones(len(knots_solar)) * mean_solar
@@ -339,46 +266,47 @@ radData.rename(
     },
     inplace=True,
 )
-# Tau = 2, using Brehm when possible
-annual_C14_data = pd.read_excel(
-    SCRIPT_DIR
-    + '/../dat/'
-    + 'ProductionRates100Versions_Matern3_2sigma2tau2.xlsx',
-    skiprows=7,
-)
-annual_C14_data['t'] = 1950 + annual_C14_data['age -yr BP']
-annual_ensemble = annual_C14_data.values[:, 5:-1]
-annual_C14_data['C14'] = annual_ensemble.mean(axis=1)
-annual_C14_data['dC14'] = annual_ensemble.std(axis=1)
-annual_C14_data['C14'] = moving_average(annual_C14_data, 2)
+if use_11year_cycle:
+    # Tau = 2, using Brehm when possible
+    annual_C14_data = pd.read_excel(
+        SCRIPT_DIR
+        + '/../dat/'
+        + 'ProductionRates100Versions_Matern3_2sigma2tau2.xlsx',
+        skiprows=7,
+    )
+    annual_C14_data['t'] = 1950 + annual_C14_data['age -yr BP']
+    annual_ensemble = annual_C14_data.values[:, 5:-1]
+    annual_C14_data['C14'] = annual_ensemble.mean(axis=1)
+    annual_C14_data['dC14'] = annual_ensemble.std(axis=1)
+    annual_C14_data['C14'] = moving_average(annual_C14_data, 2)
 
-annual_C14_data = annual_C14_data[annual_C14_data['t'] > -1000]
+    annual_C14_data = annual_C14_data[annual_C14_data['t'] > -1000]
 
-annual_C14_data.reset_index(inplace=True, drop=True)
-annual_C14_data['dC14'] = 0.1
+    annual_C14_data.reset_index(inplace=True, drop=True)
+    annual_C14_data['dC14'] = 0.1
 
-idxs = radData.query(f't > {min(annual_C14_data["t"])}').index
-radData.loc[idxs, 'C14'] = np.nan
-radData['dC14'] = np.nan
-merge_rows = []
-for _, row in annual_C14_data[['t', 'C14', 'dC14']].iterrows():
-    # try:
-    idx = radData.query(f't == {row["t"]}').index
-    if 0 == len(idx):
-        merge_rows.append(row)
-    elif len(idx) == 1:
-        radData.loc[idx, 'C14'] = row['C14']
-        # radData.loc[idx, 'dC14'] = row['dC14']
-        radData.loc[idx, 'dC14'] = 0.05      # * np.abs(row['C14'])
-    else:
-        raise ValueError(f'Multiple entries found for t = {row["t"]}')
+    idxs = radData.query(f't > {min(annual_C14_data["t"])}').index
+    radData.loc[idxs, 'C14'] = np.nan
+    radData['dC14'] = np.nan
+    merge_rows = []
+    for _, row in annual_C14_data[['t', 'C14', 'dC14']].iterrows():
+        # try:
+        idx = radData.query(f't == {row["t"]}').index
+        if 0 == len(idx):
+            merge_rows.append(row)
+        elif len(idx) == 1:
+            radData.loc[idx, 'C14'] = row['C14']
+            # radData.loc[idx, 'dC14'] = row['dC14']
+            radData.loc[idx, 'dC14'] = 0.05      # * np.abs(row['C14'])
+        else:
+            raise ValueError(f'Multiple entries found for t = {row["t"]}')
 
-radData = pd.concat(
-    [
-        pd.DataFrame(merge_rows),
-        radData,
-    ],
-)
+    radData = pd.concat(
+        [
+            pd.DataFrame(merge_rows),
+            radData,
+        ],
+    )
 
 radData.sort_values(by='t', inplace=True)
 radData.reset_index(inplace=True, drop=True)
