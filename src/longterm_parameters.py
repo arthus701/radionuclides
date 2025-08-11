@@ -45,9 +45,9 @@ tau_list = [
 
 # -----------------------------------------------------------------------------
 # Solar variation parameters
-mu_solar = 650
-sigma_solar = 203
-tau_solar = 27.2
+mu_solar = 550
+sigma_solar = 191
+tau_solar = 25.6
 tau_solar_fast = 4
 tau_fast_period = 10.4
 
