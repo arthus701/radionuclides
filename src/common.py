@@ -87,26 +87,36 @@ knots = np.arange(
     t_max + step,
     step,
 )
-knots_solar_fine = np.flip(
-    np.arange(
-        t_max,
-        t_solar_fine-step_solar_fine,
-        -step_solar_fine,
+if use_11year_cycle:
+    knots_solar_fine = np.flip(
+        np.arange(
+            t_max,
+            t_solar_fine-step_solar_fine,
+            -step_solar_fine,
+        )
     )
-)
-knots_solar_coarse = np.flip(
-    np.arange(
-        t_solar_fine-step_solar_coarse,
-        t_min-step_solar_coarse,
-        -step_solar_coarse,
+    knots_solar_coarse = np.flip(
+        np.arange(
+            t_solar_fine-step_solar_coarse,
+            t_min-step_solar_coarse,
+            -step_solar_coarse,
+        )
     )
-)
-knots_solar = np.hstack(
-    [
-        knots_solar_coarse,
-        knots_solar_fine,
-    ],
-)
+    knots_solar = np.hstack(
+        [
+            knots_solar_coarse,
+            knots_solar_fine,
+        ],
+    )
+else:
+    knots_solar = np.flip(
+        np.arange(
+            t_max + step_solar_coarse,
+            t_min,
+            -step_solar_coarse,
+        )
+    )
+    step_solar_fine = step_solar_coarse
 
 # -----------------------------------------------------------------------------
 # Magnetic field model

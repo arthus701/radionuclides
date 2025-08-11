@@ -36,7 +36,6 @@ from common import (
     idx_I,
     idx_F,
     knots_solar,
-    knots_solar_fine,
     n_ref_solar,
     ref_solar_df,
     chol_solar,
@@ -291,6 +290,7 @@ with pm.Model() as mcModel:
 
     # add fast component
     if use_11year_cycle:
+        from common import knots_solar_fine
         # solar_fast = SolarFastComponent(
         #     knots_solar_fine,
         #     tau_solar_fast,
