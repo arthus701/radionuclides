@@ -278,6 +278,16 @@ with pm.Model() as mcModel:
             n_ref_solar=n_ref_solar,
         )
         sm_at_both = sm_bimod + solar_longterm.get_sm_at_longterm()
+
+        # penalize smaller than zero
+        zero_bound = pm.math.sum(
+            pm.math.log(
+                pm.math.sigmoid(
+                    1e-2 * (sm_at_both - 150)
+                )
+            )
+        )
+        pm.Potential('zero_bound', zero_bound)
     else:
         sm_at_both = sm_bimod
 
