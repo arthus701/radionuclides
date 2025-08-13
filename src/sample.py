@@ -440,7 +440,7 @@ with pm.Model() as mcModel:
 
 if __name__ == '__main__':
     from pymc.sampling import jax as pmj
-    from numpyro.infer.initialization import init_to_median
+    from numpyro.infer.initialization import init_to_mean
 
     from parameters import mcmc_params, prefix
 
@@ -454,7 +454,7 @@ if __name__ == '__main__':
             target_accept=mcmc_params['target_accept'],
             postprocessing_backend='cpu',
             nuts_kwargs={
-                'init_strategy': init_to_median,
+                'init_strategy': init_to_mean,
             },
         )
 
