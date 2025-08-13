@@ -190,7 +190,7 @@ idx_solar = np.argmin(
     np.abs(solar_constr['Year'].min() - knots_solar)
 ).flatten()
 ref_min = knots_solar[idx_solar].item() - step_solar_fine / 2
-bins = np.arange(ref_min, t_max+step_solar_fine, step_solar_fine)
+bins = np.arange(ref_min, t_max + 2 * step_solar_fine, step_solar_fine)
 solar_constr['Interval'] = pd.cut(solar_constr['Year'], bins)
 
 ref_solar_years = []
