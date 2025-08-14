@@ -58,7 +58,7 @@ axs[0].plot(
 )
 axs[0].set_xlim(t_min, t_max)
 
-axs[0].set_xlabel('time [yrs.]')
+axs[0].set_xlabel('[yrs.]')
 
 axs[1].set_title(r'$\sigma_\text{long-term}$')
 axs[1].hist(
