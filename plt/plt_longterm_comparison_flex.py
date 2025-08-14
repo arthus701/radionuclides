@@ -1,4 +1,4 @@
-# import sys
+import sys
 import os
 
 import numpy as np
@@ -9,11 +9,8 @@ from matplotlib import pyplot as plt
 from styles import setup
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-# sys.path.append(os.path.dirname(SCRIPT_DIR + '/../src/'))
-# from common import n_ref_solar
-# longterm model files were run with different knot spacing
-# change after re-run
-n_ref_solar = 5
+sys.path.append(os.path.dirname(SCRIPT_DIR + '/../src/'))
+from common import n_ref_solar
 
 setup()
 
