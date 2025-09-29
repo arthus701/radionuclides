@@ -50,7 +50,7 @@ from common import (
 )
 
 # from fast_component import SolarFastComponent
-from periodic_component import SolarPeriodicComponent
+from alternative_periodic_component import SolarPeriodicComponent
 from longterm_component import SolarLongtermComponent
 
 ref_coeffs = pt.as_tensor(_ref_coeffs)
@@ -309,11 +309,11 @@ with pm.Model() as mcModel:
         # )
         solar_fast = SolarPeriodicComponent(
             knots_solar_fine,
-            period_solar=tau_fast_period,
+            # period_solar=tau_fast_period,
             # tau_solar=tau_solar,
-            tau_solar=20.,
-            ref_solar_knots=ref_solar_df['t'].values,
-            ref_solar=ref_solar_df['Phi fast'].values,
+            # tau_solar=20.,
+            # ref_solar_knots=ref_solar_df['t'].values,
+            # ref_solar=ref_solar_df['Phi fast'].values,
         )
 
         idx = len(knots_solar) - len(knots_solar_fine)
