@@ -8,8 +8,6 @@ from utils import interp, interp1d
 
 from parameters import (
     fix_calibration,
-    use_longterm,
-    use_11year_cycle,
     gamma_0,
     tDir,
     tInt,
@@ -36,6 +34,7 @@ from common import (
     idx_I,
     idx_F,
     knots_solar,
+    knots_solar_fine,
     n_ref_solar,
     ref_solar_df,
     chol_solar,
@@ -51,13 +50,10 @@ from common import (
 
 # from fast_component import SolarFastComponent
 from periodic_component import SolarPeriodicComponent
-from longterm_component import SolarLongtermComponent
 
 ref_coeffs = pt.as_tensor(_ref_coeffs)
 base_tensor = pt.as_tensor(base.transpose(1, 0, 2))
 fac = 0.63712**3
-
-tau_solar_longterm = None
 
 
 with pm.Model() as mcModel:
@@ -270,67 +266,15 @@ with pm.Model() as mcModel:
     # )
     # pm.Potential('zero_bound', zero_bound)
 
-    # add longterm component
-    if use_longterm:
-        solar_longterm = SolarLongtermComponent(
-            knots_solar,
-            tau_solar_longterm,
-            n_ref_solar=n_ref_solar,
-        )
-        sm_at_both = sm_bimod + solar_longterm.get_sm_at_longterm()
-
-        # penalize smaller than zero
-        zero_bound = pm.math.sum(
-            pm.math.log(
-                pm.math.sigmoid(
-                    1e-2 * (sm_at_both - 150)
-                )
-            )
-        )
-        pm.Potential('zero_bound', zero_bound)
-    else:
-        sm_at_both = sm_bimod
-
-    sm_with_ref = pm.math.concatenate(
+    sm_at_knots = pm.Deterministic(
+        'sm_at_knots',
+        pm.math.concatenate(
             (
-                sm_at_both,
+                sm_bimod,
                 ref_solar_df['Phi avg.'].values,
             ),
+        ),
     )
-
-    # add fast component
-    if use_11year_cycle:
-        from common import knots_solar_fine
-        # solar_fast = SolarFastComponent(
-        #     knots_solar_fine,
-        #     tau_solar_fast,
-        #     ref_solar_knots=ref_solar_df['t'].values,
-        #     ref_solar=ref_solar_df['Phi fast'].values,
-        # )
-        solar_fast = SolarPeriodicComponent(
-            knots_solar_fine,
-            period_solar=tau_fast_period,
-            # tau_solar=tau_solar,
-            tau_solar=20.,
-            ref_solar_knots=ref_solar_df['t'].values,
-            ref_solar=ref_solar_df['Phi fast'].values,
-        )
-
-        idx = len(knots_solar) - len(knots_solar_fine)
-        sm_at_knots = pm.Deterministic(
-            'sm_at_knots',
-            pm.math.concatenate(
-                (
-                    sm_with_ref[:idx],
-                    sm_with_ref[idx:] + solar_fast.get_sm_at_fast(),
-                )
-            )
-        )
-    else:
-        sm_at_knots = pm.Deterministic(
-            'sm_at_knots',
-            sm_with_ref,
-        )
 
     sm_rad = interp1d(
         radData['t'],
@@ -342,7 +286,7 @@ with pm.Model() as mcModel:
     sm_rad_10Be = interp1d(
         radData['t'],
         knots_solar,
-        sm_with_ref,
+        sm_at_knots,
     )
     gs_rad = interp(
         radData['t'],
@@ -436,6 +380,27 @@ with pm.Model() as mcModel:
         sigma=1.,
         observed=np.zeros(len(idx_GL)),
     )
+
+    # Model 11-year cycle as redidual, using annual data
+    # solar_fast = SolarPeriodicComponent(
+    #     knots_solar_fine,
+    #     period_solar=tau_fast_period,
+    #     # tau_solar=tau_solar,
+    #     tau_solar=20.,
+    #     ref_solar_knots=ref_solar_df['t'].values,
+    #     ref_solar=ref_solar_df['Phi fast'].values,
+    # )
+
+    # idx = len(knots_solar) - len(knots_solar_fine)
+    # sm_at_knots = pm.Deterministic(
+    #     'sm_at_knots',
+    #     pm.math.concatenate(
+    #         (
+    #             sm_with_ref[:idx],
+    #             sm_with_ref[idx:] + solar_fast.get_sm_at_fast(),
+    #         )
+    #     )
+    # )
 
 
 if __name__ == '__main__':

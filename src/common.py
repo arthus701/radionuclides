@@ -33,7 +33,6 @@ from parameters import (
     mu_solar,
     sigma_solar,
     tau_solar,
-    use_11year_cycle,
 )
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -87,36 +86,21 @@ knots = np.arange(
     t_max + step,
     step,
 )
-if use_11year_cycle:
-    knots_solar_fine = np.flip(
-        np.arange(
-            t_max,
-            t_solar_fine-step_solar_fine,
-            -step_solar_fine,
-        )
+knots_solar_fine = np.flip(
+    np.arange(
+        t_max,
+        t_solar_fine-step_solar_fine,
+        -step_solar_fine,
     )
-    knots_solar_coarse = np.flip(
-        np.arange(
-            t_solar_fine-step_solar_coarse,
-            t_min-step_solar_coarse,
-            -step_solar_coarse,
-        )
+)
+
+knots_solar = np.flip(
+    np.arange(
+        t_max + step_solar_coarse,
+        t_min,
+        -step_solar_coarse,
     )
-    knots_solar = np.hstack(
-        [
-            knots_solar_coarse,
-            knots_solar_fine,
-        ],
-    )
-else:
-    knots_solar = np.flip(
-        np.arange(
-            t_max + step_solar_coarse,
-            t_min,
-            -step_solar_coarse,
-        )
-    )
-    step_solar_fine = step_solar_coarse
+)
 
 # -----------------------------------------------------------------------------
 # Magnetic field model
@@ -276,52 +260,27 @@ radData.rename(
     },
     inplace=True,
 )
-if use_11year_cycle:
-    # Tau = 2, using Brehm when possible
-    annual_C14_data = pd.read_excel(
-        SCRIPT_DIR
-        + '/../dat/'
-        + 'ProductionRates100Versions_Matern3_2sigma2tau2.xlsx',
-        skiprows=7,
-    )
-    annual_C14_data['t'] = 1950 + annual_C14_data['age -yr BP']
-    annual_ensemble = annual_C14_data.values[:, 5:-1]
-    annual_C14_data['C14'] = annual_ensemble.mean(axis=1)
-    annual_C14_data['dC14'] = annual_ensemble.std(axis=1)
-    annual_C14_data['C14'] = moving_average(annual_C14_data, 2)
 
-    annual_C14_data = annual_C14_data[annual_C14_data['t'] > -1000]
+# Tau = 2, using Brehm when possible
+annual_C14_data = pd.read_excel(
+    SCRIPT_DIR
+    + '/../dat/'
+    + 'ProductionRates100Versions_Matern3_2sigma2tau2.xlsx',
+    skiprows=7,
+)
+annual_C14_data['t'] = 1950 + annual_C14_data['age -yr BP']
+annual_ensemble = annual_C14_data.values[:, 5:-1]
+annual_C14_data['C14'] = annual_ensemble.mean(axis=1)
+annual_C14_data['dC14'] = annual_ensemble.std(axis=1)
+annual_C14_data['C14'] = moving_average(annual_C14_data, 2)
 
-    annual_C14_data.reset_index(inplace=True, drop=True)
-    annual_C14_data['dC14'] = 0.1
+annual_C14_data = annual_C14_data[annual_C14_data['t'] > -1000]
 
-    idxs = radData.query(f't > {min(annual_C14_data["t"])}').index
-    radData.loc[idxs, 'C14'] = np.nan
-    radData['dC14'] = np.nan
-    merge_rows = []
-    for _, row in annual_C14_data[['t', 'C14', 'dC14']].iterrows():
-        # try:
-        idx = radData.query(f't == {row["t"]}').index
-        if 0 == len(idx):
-            merge_rows.append(row)
-        elif len(idx) == 1:
-            radData.loc[idx, 'C14'] = row['C14']
-            # radData.loc[idx, 'dC14'] = row['dC14']
-            radData.loc[idx, 'dC14'] = 0.05      # * np.abs(row['C14'])
-        else:
-            raise ValueError(f'Multiple entries found for t = {row["t"]}')
+annual_C14_data.reset_index(inplace=True, drop=True)
+annual_C14_data['dC14'] = 0.1
 
-    radData = pd.concat(
-        [
-            pd.DataFrame(merge_rows),
-            radData,
-        ],
-        )
-    idx = radData['dC14'].isna()
-    radData.loc[idx, 'dC14'] = 0.05     # * np.abs(radData.loc[idx, 'C14'])
-else:
-    # Use 5 % errors for all C14 records
-    radData['dC14'] = 0.05 * np.abs(radData['C14'])
+# Use 5 % errors for all C14 records
+radData['dC14'] = 0.05 * np.abs(radData['C14'])
 
 radData['dBe10_NH'] = 0.1   # * np.abs(radData['Be10_NH'])
 radData['dBe10_SH'] = 0.1   # * np.abs(radData['Be10_SH'])
