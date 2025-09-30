@@ -66,7 +66,9 @@ class SolarPeriodicComponent():
         )
         period = self.mu_period + self.chol_period @ sm_cent_fast_period
         inv_period = 1 / period
-        cycles_per_year = phase + pm.math.cumsum(inv_period * self.knots)
+        cycles_per_year = phase + pm.math.cumsum(
+            inv_period * (self.knots[2] - self.knots[1])
+        )
 
         sm_fast_at_knots = pm.Deterministic(
                 'sm_fast_at_knots',
