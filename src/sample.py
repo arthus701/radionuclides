@@ -3,6 +3,7 @@ import numpy as np
 import pymc as pm
 
 from pytensor import tensor as pt
+from pytensor.graph import vectorize_graph
 
 from utils import interp, interp1d
 
@@ -53,6 +54,7 @@ from periodic_component import SolarPeriodicComponent
 
 ref_coeffs = pt.as_tensor(_ref_coeffs)
 base_tensor = pt.as_tensor(base.transpose(1, 0, 2))
+chol_tensor = pt.as_tensor(chol)
 fac = 0.63712**3
 
 
@@ -80,8 +82,19 @@ with pm.Model() as mcModel:
         sigma=1,
         size=(n_coeffs, len(knots)-n_ref),
     )
-
-    gs_at = pt.batched_dot(chol, g_cent) + prior_mean
+    # replace batched_dot by vecorize_graph similar to how it was originally
+    # implemented
+    # https://github.com/pymc-devs/pytensor/blob/
+    # 1cf88cb710ff91c3aeee6cda12c4afd287933568/
+    # pytensor/tensor/blas.py#L1708-L1745
+    # gs_at = pt.batched_dot(chol, g_cent) + prior_mean
+    core_chol = chol_tensor[0].type()
+    core_g_cent = g_cent[0].type()
+    core_dot_chol_gs_cent = pt.dot(core_chol, core_g_cent)
+    gs_at = vectorize_graph(
+        core_dot_chol_gs_cent,
+        replace={core_chol: chol, core_g_cent: g_cent},
+    ) + prior_mean
 
     gs_at_knots = pm.Deterministic(
         'gs_at_knots',
@@ -97,7 +110,15 @@ with pm.Model() as mcModel:
         gs_at_knots.T,
     )
 
-    nez_tensor = pt.batched_dot(gs, base_tensor)
+    # See above
+    # nez_tensor = pt.batched_dot(gs, base_tensor)
+    core_gs = gs[0].type()
+    core_base = base_tensor[0].type()
+    core_dot_gs_base = pt.dot(core_gs, core_base)
+    nez_tensor = vectorize_graph(
+        core_dot_gs_base,
+        replace={core_gs: gs, core_base: base_tensor},
+    )
 
     _f = pt.sqrt(
         pt.sum(
@@ -390,7 +411,7 @@ with pm.Model() as mcModel:
     sm_11_fine = interp1d(
         annual_C14_data['t'],
         knots_solar_fine,
-        solar_11,
+        solar_11.get_sm_at_fast(),
     )
 
     q_C14_fine = prod_C14(dm_fine, sm_rad_fine)
