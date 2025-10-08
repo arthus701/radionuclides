@@ -261,24 +261,6 @@ radData.rename(
     inplace=True,
 )
 
-# Tau = 2, using Brehm when possible
-annual_C14_data = pd.read_excel(
-    SCRIPT_DIR
-    + '/../dat/'
-    + 'ProductionRates100Versions_Matern3_2sigma2tau2.xlsx',
-    skiprows=7,
-)
-annual_C14_data['t'] = 1950 + annual_C14_data['age -yr BP']
-annual_ensemble = annual_C14_data.values[:, 5:-1]
-annual_C14_data['C14'] = annual_ensemble.mean(axis=1)
-annual_C14_data['dC14'] = annual_ensemble.std(axis=1)
-annual_C14_data['C14'] = moving_average(annual_C14_data, 2)
-
-annual_C14_data = annual_C14_data[annual_C14_data['t'] > -1000]
-
-annual_C14_data.reset_index(inplace=True, drop=True)
-annual_C14_data['dC14'] = 0.1
-
 # Use 5 % errors for all C14 records
 radData['dC14'] = 0.05 * np.abs(radData['C14'])
 
@@ -288,13 +270,56 @@ radData['dBe10_SH'] = 0.1   # * np.abs(radData['Be10_SH'])
 radData.sort_values(by='t', inplace=True)
 radData.reset_index(inplace=True, drop=True)
 
-# exclude solar storm
-idx = radData.query('773.5 <= t and t <= 775.5').index
-radData.loc[idx, 'C14'] = np.nan
-
 idx_GL = np.asarray(radData.query('C14 == C14').index, dtype=int)
 idx_NH = np.asarray(radData.query('Be10_NH == Be10_NH').index, dtype=int)
 idx_SH = np.asarray(radData.query('Be10_SH == Be10_SH').index, dtype=int)
+
+# Tau = 2, using Brehm when possible
+annual_C14_data = pd.read_excel(
+    SCRIPT_DIR
+    + '/../dat/'
+    + 'ProductionRates100Versions_Matern3_2sigma2tau2.xlsx',
+    skiprows=7,
+)
+annual_C14_data['t'] = 1950 + annual_C14_data['age -yr BP']
+# annual_ensemble = annual_C14_data.values[:, 5:-1]
+
+# annual_C14_data['C14'] = annual_ensemble.mean(axis=1)
+# annual_C14_data['dC14'] = annual_ensemble.std(axis=1)
+
+annual_C14_data['C14'] = annual_C14_data.values[:, 1]
+annual_C14_data['dC14'] = annual_C14_data.values[:, 2]
+
+annual_C14_data['C14'] = moving_average(annual_C14_data, 2)
+
+annual_C14_data = annual_C14_data[annual_C14_data['t'] > -1000]
+
+annual_C14_data.reset_index(inplace=True, drop=True)
+annual_C14_data['dC14'] = 0.1
+
+annual_C14_data = annual_C14_data[['t', 'C14', 'dC14']]
+
+# exclude solar storm
+idx = annual_C14_data.query('773.5 <= t and t <= 775.5').index
+annual_C14_data.loc[idx, 'C14'] = np.nan
+
+t_min = annual_C14_data['t'].min()
+
+bins = radData[t_min < radData['t']]['t'].values
+binwidth = 22
+bins = np.concatenate(
+    (
+        [bins[0] - binwidth / 2],
+        bins + binwidth / 2,
+    )
+)
+
+annual_C14_data.dropna(how='any', inplace=True)
+
+annual_C14_data['time_bin'] = pd.cut(annual_C14_data['t'], bins)
+annual_C14_data['C14_detrended'] = annual_C14_data.groupby(
+    'time_bin', observed=True,
+)['C14'].transform(lambda x: x - x.mean())
 
 
 if __name__ == '__main__':
