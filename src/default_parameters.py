@@ -3,7 +3,7 @@ import numpy as np
 from pymagglobal.utils import REARTH
 
 # -----------------------------------------------------------------------------
-prefix = 'radio_11_year'
+prefix = 'radio_sine_prior'
 fix_calibration = False
 use_longterm = False
 use_11year_cycle = False
