@@ -43,12 +43,14 @@ class SolarPeriodicComponent():
         )
 
     def get_sm_at_fast(self):
-        phase = pm.Normal(
-            'sm_fast_phase',
-            mu=0,
-            sigma=1,
-            size=1,
-        )
+        # phase = pm.Normal(
+        #     'sm_fast_phase',
+        #     mu=0,
+        #     sigma=1,
+        #     size=1,
+        # )
+        # eyeball from visually fitting sine with fixed period of 10.4 years
+        phase = -50 / 360
 
         sm_cent_fast_scale = pm.Normal(
             'sm_cent_fast_scale',
@@ -66,14 +68,14 @@ class SolarPeriodicComponent():
         )
         period = self.mu_period + self.chol_period @ sm_cent_fast_period
         inv_period = 1 / period
-        cycles_per_year = phase + pm.math.cumsum(
+        cycles_per_year = pm.math.cumsum(
             inv_period * (self.knots[2] - self.knots[1])
         )
 
         sm_fast_at_knots = pm.Deterministic(
-                'sm_fast_at_knots',
-                self.prior_mean
-                + scale * pm.math.sin(2 * np.pi * cycles_per_year)
-            )
+            'sm_fast_at_knots',
+            self.prior_mean
+            + scale * pm.math.sin(2 * np.pi * (phase + cycles_per_year))
+        )
 
         return sm_fast_at_knots
