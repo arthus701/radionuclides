@@ -17,7 +17,7 @@ from parameters import (
     sigma_solar,
     # tau_solar,
     # tau_solar_fast,
-    tau_fast_period,
+    # tau_fast_period,
 )
 
 from common import (
@@ -383,9 +383,9 @@ with pm.Model() as mcModel:
     # XXX potential speedup if interpolation is done on dm
     solar_11 = SolarPeriodicComponent(
         knots_solar_fine,
-        period_solar=tau_fast_period,
+        # period_solar=tau_fast_period,
         # tau_solar=tau_solar,
-        tau_solar=20.,
+        # tau_solar=20.,
         ref_solar_knots=ref_solar_df['t'].values,
         ref_solar=ref_solar_df['Phi fast'].values,
     )
