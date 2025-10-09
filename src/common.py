@@ -321,6 +321,14 @@ annual_C14_data['C14_detrended'] = annual_C14_data.groupby(
     'time_bin', observed=True,
 )['C14'].transform(lambda x: x - x.mean())
 
+brehm_data_CE = (969, 1933)
+brehm_data_BCE = (-1000, -2)
+
+annual_C14_data = annual_C14_data.query(
+    f'({brehm_data_CE[0]} <= t and t <= {brehm_data_CE[1]})'
+    f'or ({brehm_data_BCE[0]} <= t and t <= {brehm_data_BCE[1]})'
+)
+annual_C14_data.reset_index(inplace=True, drop=True)
 
 if __name__ == '__main__':
     from matplotlib import pyplot as plt
