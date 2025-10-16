@@ -20,6 +20,13 @@ class SolarPeriodicComponent():
         self.jitter = jitter
         self.ref_solar = ref_solar
 
+        AMPLITUDE = 250
+        PHASE = 0.51 * 180
+        PERIOD = 10.4
+        mean_function = AMPLITUDE * np.sin(
+            2 * np.pi * (PHASE / 360 + self.knots / PERIOD)
+        )
+
         if self.tau < 0:
             raise ValueError(
                 f'Timescale has to be larger than 0 and not {self.tau}.'
@@ -29,6 +36,10 @@ class SolarPeriodicComponent():
         else:
             if ref_solar_knots is not None:
                 n_ref_solar = len(ref_solar_knots)
+
+                mean_at_ref = AMPLITUDE * np.sin(
+                    2 * np.pi * (PHASE / 360 + ref_solar_knots / PERIOD)
+                )
 
                 cov_solar = cosine_kernel(
                     self.knots,
@@ -63,7 +74,8 @@ class SolarPeriodicComponent():
                 _icov_obs = np.linalg.inv(
                     cov_obs + 2500 * np.eye(len(ref_solar_knots))
                 )
-                prior_mean = cor_obs @ _icov_obs @ ref_solar
+                prior_mean = mean_function \
+                    + cor_obs @ _icov_obs @ (ref_solar - mean_at_ref)
                 cov_solar = cov_solar - cor_obs @ _icov_obs @ cor_obs.T
 
                 chol_solar = np.linalg.cholesky(
@@ -100,13 +112,13 @@ class SolarPeriodicComponent():
             sigma=1,
             size=(len(self.prior_mean),),
         )
-        # sm_fast_scale = pm.Gamma(
-        #     'sm_fast_scale',
-        #     alpha=3,
-        #     beta=3/200,
-        #     size=1,
-        # )
-        sm_fast_scale = 250     # MeV
+        sm_fast_scale = pm.Gamma(
+            'sm_fast_scale',
+            alpha=3,
+            beta=3/200,
+            size=1,
+        )
+        # sm_fast_scale = 250     # MeV
         # damping = pm.math.sigmoid(
         #     0.1 * (self.knots + 100)
         # )
