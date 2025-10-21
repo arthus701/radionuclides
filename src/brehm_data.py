@@ -59,10 +59,15 @@ brehm_24_data['14C production normalized'] = \
 
 brehm_24_t = -brehm_24_data['year (BCE)'].values
 brehm_24_C14 = brehm_24_data['14C production normalized'].values
+
+brehm_24_dC14 = brehm_24_data['14C production uncertainty (kg/year)'] \
+    / brehm_24_data['14C production (kg/year)'].values.mean()
+
 brehm_24_data['time_bin'] = pd.cut(
     -brehm_24_data['year (BCE)'],
     bins,
 )
+brehm_24_dC14
 brehm_24_detrended = brehm_24_data.groupby(
     'time_bin', observed=True,
 )['14C production normalized'].transform(lambda x: x - x.mean())
@@ -71,10 +76,18 @@ brehm_data = pd.DataFrame(
     data={
         't': np.hstack((brehm_21_t, brehm_24_t)),
         '14C': np.hstack((brehm_21_C14, brehm_24_C14)),
+        'd14C': np.hstack(
+            (
+                # 1.5 * np.mean(brehm_24_dC14) * np.ones_like(brehm_21_t),
+                0.05 * np.ones_like(brehm_21_t),
+                brehm_24_dC14,
+            )
+        ),
         '14C_detrended': np.hstack((brehm_21_detrended, brehm_24_detrended)),
     }
 )
-
+brehm_data.sort_values(by='t', inplace=True)
+brehm_data.reset_index(inplace=True, drop=True)
 
 if __name__ == '__main__':
     from matplotlib import pyplot as plt
@@ -85,15 +98,21 @@ if __name__ == '__main__':
         sharex=True,
     )
 
-    axs[0].scatter(
+    axs[0].errorbar(
         brehm_data['t'],
         brehm_data['14C'],
+        yerr=brehm_data['d14C'],
         marker='.',
+        color='grey',
+        ls='',
     )
-    axs[1].scatter(
+    axs[1].errorbar(
         brehm_data['t'],
         brehm_data['14C_detrended'],
+        yerr=brehm_data['d14C'],
         marker='.',
+        color='grey',
+        ls='',
     )
 
     axs[0].set_title('$^{14}$C production rates from Brehm et al.')
