@@ -118,7 +118,7 @@ class SolarPeriodicComponent():
         #     beta=3/200,
         #     size=1,
         # )
-        sm_fast_scale = 180     # MeV
+        sm_fast_scale = 250     # MeV
         # damping = pm.math.sigmoid(
         #     0.1 * (self.knots + 100)
         # )
