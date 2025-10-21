@@ -40,7 +40,7 @@ from common import (
     chol_solar,
     prior_mean_solar,
     radData,
-    annual_C14_data,
+    # annual_C14_data,
     idx_GL,
     idx_NH,
     idx_SH,
@@ -49,6 +49,8 @@ from common import (
     prod_C14,
 )
 
+from brehm_data import brehm_data
+
 # from fast_component import SolarFastComponent
 from periodic_component import SolarPeriodicComponent
 
@@ -56,6 +58,8 @@ ref_coeffs = pt.as_tensor(_ref_coeffs)
 base_tensor = pt.as_tensor(base.transpose(1, 0, 2))
 chol_tensor = pt.as_tensor(chol)
 fac = 0.63712**3
+
+annual_C14_data = brehm_data
 
 
 with pm.Model() as mcModel:
