@@ -20,12 +20,26 @@ class SolarPeriodicComponent():
         self.jitter = jitter
         self.ref_solar = ref_solar
 
+        SIGMA = 250
         AMPLITUDE = 250
         PHASE = 0.51 * 180
         PERIOD = 10.4
         mean_function = AMPLITUDE * np.sin(
             2 * np.pi * (PHASE / 360 + self.knots / PERIOD)
         )
+
+        def kernel(x, y=None):
+            return cosine_kernel(
+                x,
+                y,
+                sigma=SIGMA,
+                p=self.period,
+            ) * sqe_kernel(
+                x,
+                y,
+                tau=self.tau,
+                sigma=1.,
+            )
 
         if self.tau < 0:
             raise ValueError(
@@ -41,35 +55,9 @@ class SolarPeriodicComponent():
                     2 * np.pi * (PHASE / 360 + ref_solar_knots / PERIOD)
                 )
 
-                cov_solar = cosine_kernel(
-                    self.knots,
-                    sigma=250.,
-                    p=self.period,
-                ) * sqe_kernel(
-                    self.knots,
-                    tau=self.tau,
-                    sigma=1.,
-                )
-                cov_obs = cosine_kernel(
-                    ref_solar_knots,
-                    sigma=250.,
-                    p=self.period,
-                ) * sqe_kernel(
-                    ref_solar_knots,
-                    tau=self.tau,
-                    sigma=1.,
-                )
-                cor_obs = cosine_kernel(
-                    self.knots,
-                    ref_solar_knots,
-                    sigma=250.,
-                    p=self.period,
-                ) * sqe_kernel(
-                    self.knots,
-                    ref_solar_knots,
-                    tau=self.tau,
-                    sigma=1.,
-                )
+                cov_solar = kernel(self.knots)
+                cov_obs = kernel(ref_solar_knots)
+                cor_obs = kernel(self.knots, ref_solar_knots)
 
                 _icov_obs = np.linalg.inv(
                     cov_obs + 2500 * np.eye(len(ref_solar_knots))
@@ -83,20 +71,12 @@ class SolarPeriodicComponent():
                     + self.jitter * np.eye(len(self.knots) - n_ref_solar)
                 )
 
-                self.prior_mean = prior_mean[:-n_ref_solar] / 250
-                self.chol_solar = chol_solar / 250
+                self.prior_mean = prior_mean[:-n_ref_solar] / SIGMA
+                self.chol_solar = chol_solar / SIGMA
             else:
                 self.prior_mean = np.zeros_like(self.knots)
 
-                cov_solar = cosine_kernel(
-                    self.knots,
-                    sigma=1.,
-                    p=self.period,
-                ) * sqe_kernel(
-                    self.knots,
-                    tau=self.tau,
-                    sigma=1.,
-                )
+                cov_solar = kernel / SIGMA**2
 
                 self.chol_solar = np.linalg.cholesky(
                     cov_solar + self.jitter * np.eye(len(self.knots))

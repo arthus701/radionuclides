@@ -6,33 +6,18 @@ import pandas as pd
 
 from scipy.signal import butter, sosfiltfilt
 
-from paleokalmag.utils import dsh_basis
-from paleokalmag.data_handling import Data
-# from paleokalmag.data_handling import read_data
-
-from pymagglobal.utils import lmax2N, i2lm_l    # , scaling
-
 from utils import matern_kernel, moving_average
 
 from parameters import (
-    lmax,
     t_min,
     t_max,
-    step,
     t_solar_fine,
     step_solar_coarse,
     step_solar_fine,
-    gamma_0,
-    alpha_list,
-    tau_list,
-    dip,
-    alpha_dip,
-    omega,
-    xi,
-    chi,
     mu_solar,
     sigma_solar,
     tau_solar,
+    use_11year_cycle,
 )
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -80,79 +65,37 @@ def prod_Be10(dm, phi):
 
 
 # Derived parameters
-n_coeffs = lmax2N(lmax)
-knots = np.arange(
-    t_min,
-    t_max + step,
-    step,
-)
-knots_solar_fine = np.flip(
-    np.arange(
-        t_max,
-        t_solar_fine-step_solar_fine,
-        -step_solar_fine,
+if use_11year_cycle:
+    knots_solar_fine = np.flip(
+        np.arange(
+            t_max,
+            t_solar_fine-step_solar_fine,
+            -step_solar_fine,
+        )
     )
-)
-
-knots_solar = np.flip(
-    np.arange(
-        t_max + step_solar_coarse,
-        t_min,
-        -step_solar_coarse,
+    knots_solar_coarse = np.flip(
+        np.arange(
+            t_solar_fine-step_solar_coarse,
+            t_min-step_solar_coarse,
+            -step_solar_coarse,
+        )
     )
-)
-
-# -----------------------------------------------------------------------------
-# Magnetic field model
-# Prior mean and covariance (as cholesky factors)
-prior_mean = np.zeros((n_coeffs, len(knots)))
-prior_mean[0] = gamma_0
-
-alphas = np.array([alpha_list[i2lm_l(it)-1]**2 for it in range(n_coeffs)])
-taus = np.array([tau_list[i2lm_l(it)-1] for it in range(n_coeffs)])
-
-alphas[0:dip] = alpha_dip**2
-taus[0:dip] = 1 / omega
-
-dt = np.abs(knots[:, None] - knots[None, :])
-diag = alphas
-itau = np.diag(1./taus)
-frac = dt[:, None, :, None] * itau[None, :, None, :]
-frac = np.abs(frac)
-# first axis are times, second axis are coeffs
-cov = (1 + frac) * np.exp(-frac) * np.diag(diag)[None, :, None, :]
-cov = np.diagonal(cov, axis1=1, axis2=3).copy()
-
-# axial dipole with different matrix:
-for it in range(dip):
-    cov[:, :, it] = alpha_dip**2 * 0.5 / xi * (
-        (xi + chi) * np.exp((xi - chi)*dt)
-        + (xi - chi) * np.exp(-(xi + chi)*dt)
+    knots_solar = np.hstack(
+        [
+            knots_solar_coarse,
+            knots_solar_fine,
+        ],
     )
+else:
+    knots_solar = np.flip(
+        np.arange(
+            t_max + step_solar_coarse,
+            t_min,
+            -step_solar_coarse,
+        )
+    )
+    step_solar_fine = step_solar_coarse
 
-# Set the number of knots to be replaced by the reference model
-n_ref = 3
-
-_Kalmag = np.genfromtxt(
-    SCRIPT_DIR + '/../dat/Kalmag_CORE_MEAN_Radius_6371.2.txt'
-)
-# Ref coeffs should be of shape (n_coeffs, n_ref)
-ref_coeffs = _Kalmag[1:n_coeffs+1] / 1000
-
-chol = np.zeros((n_coeffs, len(knots)-n_ref, len(knots)-n_ref))
-
-for it in range(n_coeffs):
-    _cov = np.copy(cov[:len(knots)-n_ref, :len(knots)-n_ref, it])
-    _cor = cov[:, len(knots)-n_ref:, it]
-    _icov = np.linalg.inv(cov[len(knots)-n_ref:, len(knots)-n_ref:, it])
-    prior_mean[it] += _cor @ _icov @ \
-        (ref_coeffs[it] - prior_mean[it, len(knots)-n_ref:])
-
-    _cov -= _cor[:len(knots)-n_ref] @ _icov @ _cor[:len(knots)-n_ref].T
-    chol[it, :, :] = np.linalg.cholesky(_cov)
-
-# overwrite for usage in pyMC model
-prior_mean = prior_mean[:, :len(knots)-n_ref]
 # -----------------------------------------------------------------------------
 # Solar modulation model
 
@@ -230,23 +173,6 @@ chol_solar = np.linalg.cholesky(cov_solar+1e-6*np.eye(len(knots_solar)))[
 
 # -----------------------------------------------------------------------------
 # Data setup
-# thermoremament magnetic data
-rawData = pd.read_csv(
-    SCRIPT_DIR + '/../dat/afm9k2_data.csv',
-)
-rawData['FID'] = 'afm9k.2_data'
-
-data = Data(rawData)
-
-idx_D = np.asarray(data.idx_D, dtype=int)
-idx_I = np.asarray(data.idx_I, dtype=int)
-idx_F = np.asarray(data.idx_F, dtype=int)
-
-z_at = data.inputs
-
-base = dsh_basis(lmax, z_at)
-base = base.reshape(lmax2N(lmax), z_at.shape[1], 3)
-
 # radionuclide production rate data
 radData = pd.read_table(
     SCRIPT_DIR + '/../dat/CRN_9k_230922.txt'
@@ -268,11 +194,6 @@ radData['dBe10_NH'] = 0.1   # * np.abs(radData['Be10_NH'])
 radData['dBe10_SH'] = 0.1   # * np.abs(radData['Be10_SH'])
 
 radData.sort_values(by='t', inplace=True)
-radData.reset_index(inplace=True, drop=True)
-
-idx_GL = np.asarray(radData.query('C14 == C14').index, dtype=int)
-idx_NH = np.asarray(radData.query('Be10_NH == Be10_NH').index, dtype=int)
-idx_SH = np.asarray(radData.query('Be10_SH == Be10_SH').index, dtype=int)
 
 # Tau = 2, using Brehm when possible
 annual_C14_data = pd.read_excel(
@@ -303,9 +224,9 @@ annual_C14_data = annual_C14_data[['t', 'C14', 'dC14']]
 idx = annual_C14_data.query('773.5 <= t and t <= 775.5').index
 annual_C14_data.loc[idx, 'C14'] = np.nan
 
-t_min = annual_C14_data['t'].min()
+t_min_C14 = annual_C14_data['t'].min()
 
-bins = radData[t_min < radData['t']]['t'].values
+bins = radData[t_min_C14 < radData['t']]['t'].values
 binwidth = 22
 bins = np.concatenate(
     (
@@ -328,7 +249,19 @@ annual_C14_data = annual_C14_data.query(
     f'({brehm_data_CE[0]} <= t and t <= {brehm_data_CE[1]})'
     f'or ({brehm_data_BCE[0]} <= t and t <= {brehm_data_BCE[1]})'
 )
+annual_C14_data = annual_C14_data.query(
+    f'{t_min} <= t and t <= {t_max}'
+)
 annual_C14_data.reset_index(inplace=True, drop=True)
+
+radData = radData.query(
+    f'{t_min} <= t and t <= {t_max}'
+)
+radData.reset_index(inplace=True, drop=True)
+
+idx_GL = np.asarray(radData.query('C14 == C14').index, dtype=int)
+idx_NH = np.asarray(radData.query('Be10_NH == Be10_NH').index, dtype=int)
+idx_SH = np.asarray(radData.query('Be10_SH == Be10_SH').index, dtype=int)
 
 if __name__ == '__main__':
     from matplotlib import pyplot as plt
@@ -351,6 +284,21 @@ if __name__ == '__main__':
         radData['C14'],
         ls='',
         color='grey',
+        marker='.',
+    )
+    ax.errorbar(
+        annual_C14_data['t'],
+        annual_C14_data['C14'],
+        yerr=annual_C14_data['dC14'],
+        ls='',
+        color='C0',
+        alpha=0.3,
+    )
+    ax.scatter(
+        annual_C14_data['t'],
+        annual_C14_data['C14'],
+        ls='',
+        color='C0',
         marker='.',
     )
     ax.set_xlabel('time [yrs.]')

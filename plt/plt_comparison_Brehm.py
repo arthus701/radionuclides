@@ -2,6 +2,7 @@ import sys
 import os
 
 import numpy as np
+import arviz as az
 
 from pandas import read_excel
 
@@ -14,11 +15,10 @@ from styles import setup
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR + '/../src/'))
 from common import (
+    knots_solar,
     knots_solar_fine,
-    n_ref_solar,
-    # annual_C14_data,
-    radData,
 )
+from utils import npinterp
 
 
 def butter_bandpass_filter(data, lowcut, highcut, fs, order=5):
@@ -81,18 +81,27 @@ brehm_sm_BP = butter_bandpass_filter(
     fs=brehm_sm_sample_frequency,
 )
 
-with np.load(
-    '../out/radio_periodic_ensemble.npz'
-) as fh:
-    knots_solar = fh['knots_solar']
-    solar = 1.025 * fh['solar'] + 24.18
-    solar = solar[:, ::2]
+iData = az.from_netcdf('../out/one_dim_result.nc')
+
+solar = iData.posterior['sm_at_knots'].values[:, ::2, :]
+solar = solar.reshape(-1, len(knots_solar)).T
+solar = 1.025 * solar + 24.18
+
+solar_fine = iData.posterior['sm_fast_at_knots'].values[:, ::2, :]
+solar_fine = solar_fine.reshape(-1, len(knots_solar_fine)).T
+solar_fine = 1.025 * solar_fine + 24.18
+
+solar_total = npinterp(
+    knots_solar_fine,
+    knots_solar,
+    solar
+) + solar_fine
 
 sample_frequency = 1. / np.mean(
     knots_solar_fine[1:] - knots_solar_fine[:-1]
 )
 full_samples_BP = butter_bandpass_filter(
-    solar[-len(knots_solar_fine):].T,
+    solar_total.T,
     1 / 18,
     1 / 8.1,
     fs=sample_frequency,
@@ -104,18 +113,11 @@ fig, axs = plt.subplots(
 )
 
 axs[0].plot(
-    knots_solar_fine[:-n_ref_solar],
-    np.mean(full_samples_BP[:-n_ref_solar], axis=1),
-    color='C0',
-    label='This study',
-    zorder=5,
-)
-axs[0].plot(
     knots_solar_fine,
     np.mean(full_samples_BP, axis=1),
     color='C0',
-    zorder=-1,
-    alpha=0.5,
+    label='This study',
+    zorder=5,
 )
 axs[0].plot(
     brehm_sm_t,
@@ -126,25 +128,18 @@ axs[0].plot(
 )
 
 axs[1].plot(
-    knots_solar_fine[:-n_ref_solar],
-    np.mean(full_samples_BP[:-n_ref_solar], axis=1),
+    knots_solar_fine,
+    np.mean(full_samples_BP, axis=1),
     color='C0',
     label='This study',
     zorder=5,
 )
-axs[1].plot(
-    knots_solar_fine,
-    np.mean(full_samples_BP, axis=1),
-    color='C0',
-    zorder=-1,
-    alpha=0.5,
-)
 axs[1].fill_between(
-    knots_solar_fine[:-n_ref_solar],
-    np.mean(full_samples_BP[:-n_ref_solar], axis=1)
-    - np.std(full_samples_BP[:-n_ref_solar], axis=1),
-    np.mean(full_samples_BP[:-n_ref_solar], axis=1)
-    + np.std(full_samples_BP[:-n_ref_solar], axis=1),
+    knots_solar_fine,
+    np.mean(full_samples_BP, axis=1)
+    - np.std(full_samples_BP, axis=1),
+    np.mean(full_samples_BP, axis=1)
+    + np.std(full_samples_BP, axis=1),
     color='C0',
     zorder=-1,
     alpha=0.2,
