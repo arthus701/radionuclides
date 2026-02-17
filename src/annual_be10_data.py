@@ -2,6 +2,8 @@ import numpy as np
 
 import pandas as pd
 
+from scipy.signal import butter, sosfiltfilt
+
 from common import radData, t_min, t_max
 
 raw_data = pd.read_csv(
@@ -53,9 +55,61 @@ annual_Be10_data['dBe10'] = 0.1
 annual_Be10_data = annual_Be10_data.query(
     f'{t_min} <= t and t <= {t_max}'
 )
+# Very brief outlier removal
+mu = annual_Be10_data['Be10_detrended'].mean()
+sigma = annual_Be10_data['Be10_detrended'].std()
+
+remove = np.abs(annual_Be10_data['Be10_detrended'] - mu) > 3 * sigma
+annual_Be10_data.loc[remove, 'Be10_detrended'] = np.nan
+
 annual_Be10_data.dropna(how='any', inplace=True)
 annual_Be10_data.sort_values(by='t', inplace=True)
 annual_Be10_data.reset_index(inplace=True, drop=True)
+
+
+# crude lowpass filter
+def butter_lowpass_filter(data, highcut, fs, order=5):
+    sos = butter(
+        order,
+        highcut,
+        fs=fs,
+        btype='low',
+        analog=False,
+        output='sos',
+    )
+    y = sosfiltfilt(sos, data)
+    return y
+
+
+def interp_LP(x, y, lower=1 / 12):
+    interp_x, dt = np.linspace(
+        x.min(),
+        x.max(),
+        10001,
+        retstep=True
+    )
+    interp_y = np.interp(
+        interp_x,
+        x,
+        y,
+    )
+
+    interp_y_BP = butter_lowpass_filter(
+        interp_y,
+        lower,
+        fs=1 / dt,
+    )
+    return np.interp(x, interp_x, interp_y_BP)
+
+
+detrended = np.copy(annual_Be10_data['Be10_detrended'].values)
+lowpassed_data = interp_LP(
+    annual_Be10_data['t'].values,
+    annual_Be10_data['Be10_detrended'].values,
+    lower=1/4,
+)
+annual_Be10_data['Be10_detrended'] = lowpassed_data
+annual_Be10_data['dBe10'] = 0.07
 
 if __name__ == '__main__':
     from matplotlib import pyplot as plt
@@ -65,9 +119,14 @@ if __name__ == '__main__':
         figsize=(8, 4),
     )
 
-    ax.scatter(
+    ax.plot(
         annual_Be10_data['t'],
-        annual_Be10_data['Be10_detrended'],
+        detrended,
+        marker='.',
+    )
+    ax.plot(
+        annual_Be10_data['t'],
+        lowpassed_data,
         marker='.',
     )
 
