@@ -1,7 +1,7 @@
 import numpy as np
 import pymc as pm
 
-from utils import cosine_kernel, sqe_kernel
+from utils import quasiperiodic_kernel
 
 
 class SolarPeriodicComponent():
@@ -29,16 +29,13 @@ class SolarPeriodicComponent():
         )
 
         def kernel(x, y=None):
-            return cosine_kernel(
+            return quasiperiodic_kernel(
                 x,
                 y,
                 sigma=SIGMA,
                 p=self.period,
-            ) * sqe_kernel(
-                x,
-                y,
                 tau=self.tau,
-                sigma=1.,
+                gamma=1.0,
             )
 
         if self.tau < 0:
