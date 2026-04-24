@@ -17,12 +17,13 @@ from parameters import (
 from common import (
     knots_solar,
     knots_solar_fine,
-    n_ref_solar,
-    ref_solar_df,
+    ref_solar_years,
+    ref_solar,
+    ref_solar_years_fine,
+    ref_solar_fine,
     chol_solar,
-    prior_mean_solar,
     radData,
-    # annual_C14_data,
+    annual_C14_data,
     idx_GL,
     idx_NH,
     idx_SH,
@@ -31,15 +32,13 @@ from common import (
     prod_C14,
 )
 
-from brehm_data import brehm_data
+# from brehm_data import brehm_data as annual_C14_data
 from annual_be10_data import annual_Be10_data
 
 # from fast_component import SolarFastComponent
 from periodic_component import SolarPeriodicComponent
 
 fac = 0.63712**3
-
-annual_C14_data = brehm_data
 
 with np.load('../out/radio_ensemble.npz') as fh:
     knots = fh['knots']
@@ -54,12 +53,11 @@ with pm.Model() as mcModel:
         'sm_cent',
         mu=0,
         sigma=1,
-        size=(len(knots_solar)-n_ref_solar,),
+        size=len(knots_solar),
     )
-
+    # XXX One could use unscaled samples directly
     # correlated samples
-    sm_at = chol_solar @ sm_cent + prior_mean_solar
-
+    sm_at = chol_solar @ sm_cent + mu_solar
     # uniform correlated samples via cdf (normal w. prior mean and prior var)
     sm_at -= mu_solar
     sm_at /= sigma_solar
@@ -144,12 +142,20 @@ with pm.Model() as mcModel:
 
     sm_at_knots = pm.Deterministic(
         'sm_at_knots',
-        pm.math.concatenate(
-            (
-                sm_bimod,
-                ref_solar_df['Phi avg.'].values,
-            ),
-        ),
+        sm_bimod,
+    )
+
+    sm_at_ref = interp1d(
+        ref_solar_years,
+        knots_solar,
+        sm_at_knots,
+    )
+
+    pm.Normal(
+        'sm_anchor_avg',
+        mu=sm_at_ref - ref_solar,
+        sigma=50,
+        observed=np.zeros_like(ref_solar),
     )
 
     sm_rad = interp1d(
@@ -240,10 +246,23 @@ with pm.Model() as mcModel:
         period_solar=tau_fast_period,
         # tau_solar=tau_solar,
         tau_solar=30.,
-        ref_solar_knots=ref_solar_df['t'].values,
-        ref_solar=ref_solar_df['Phi fast'].values,
+        # ref_solar_knots=ref_solar_df['t'].values,
+        # ref_solar=ref_solar_df['Phi fast'].values,
     )
     sm_fast_at_knots = solar_11.get_sm_at_fast()
+
+    sm_fast_at_ref = interp1d(
+        ref_solar_years_fine,
+        knots_solar_fine,
+        sm_fast_at_knots,
+    )
+
+    pm.Normal(
+        'sm_anchor_fine',
+        mu=sm_fast_at_ref - ref_solar_fine,
+        sigma=20,
+        observed=np.zeros_like(ref_solar_fine),
+    )
     # -------------------------------------------------------------------------
     # Annual C14
     gs_rad_fine_C14 = npinterp(
@@ -331,13 +350,13 @@ with pm.Model() as mcModel:
             - annual_Be10_data['Be10_detrended'].values
         ) / annual_Be10_data['dBe10'].values,
     )
-    be10_11_obs = pm.Normal(
-        'Be10_11_NH',
-        # nu=1 + nus[5],
-        mu=rBe10_11_NH,
-        sigma=1.,
-        observed=np.zeros(len(annual_Be10_data)),
-    )
+    # be10_11_obs = pm.Normal(
+    #     'Be10_11_NH',
+    #     # nu=1 + nus[5],
+    #     mu=rBe10_11_NH,
+    #     sigma=1.,
+    #     observed=np.zeros(len(annual_Be10_data)),
+    # )
 
 if __name__ == '__main__':
     from pymc.sampling import jax as pmj
