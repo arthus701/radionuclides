@@ -1,3 +1,5 @@
+from functools import partial
+
 import numpy as np
 import pymc as pm
 
@@ -24,19 +26,18 @@ class SolarPeriodicComponent():
         AMPLITUDE = 250
         PHASE = 0.51 * 180
         PERIOD = 10.4
+
         mean_function = AMPLITUDE * np.sin(
             2 * np.pi * (PHASE / 360 + self.knots / PERIOD)
         )
 
-        def kernel(x, y=None):
-            return quasiperiodic_kernel(
-                x,
-                y,
-                sigma=SIGMA,
-                p=self.period,
-                tau=self.tau,
-                gamma=1.0,
-            )
+        kernel = partial(
+            quasiperiodic_kernel,
+            sigma=SIGMA,
+            p=self.period,
+            tau=self.tau,
+            gamma=1.0,
+        )
 
         if self.tau < 0:
             raise ValueError(
@@ -68,12 +69,13 @@ class SolarPeriodicComponent():
                     + self.jitter * np.eye(len(self.knots) - n_ref_solar)
                 )
 
-                self.prior_mean = prior_mean[:-n_ref_solar] / SIGMA
-                self.chol_solar = chol_solar / SIGMA
+                self.prior_mean = prior_mean[:-n_ref_solar]
+                self.chol_solar = chol_solar
             else:
-                self.prior_mean = np.zeros_like(self.knots)
-
-                cov_solar = kernel / SIGMA**2
+                self.prior_mean = AMPLITUDE * np.sin(
+                    2 * np.pi * (PHASE / 360 + self.knots / PERIOD)
+                )
+                cov_solar = kernel(self.knots)
 
                 self.chol_solar = np.linalg.cholesky(
                     cov_solar + self.jitter * np.eye(len(self.knots))
@@ -92,10 +94,10 @@ class SolarPeriodicComponent():
         # sm_fast_scale = pm.Gamma(
         #     'sm_fast_scale',
         #     alpha=3,
-        #     beta=3/200,
+        #     beta=3,
         #     size=1,
         # )
-        sm_fast_scale = 250     # MeV
+        sm_fast_scale = 1
         # damping = pm.math.sigmoid(
         #     0.1 * (self.knots + 100)
         # )
@@ -118,4 +120,5 @@ class SolarPeriodicComponent():
                 'sm_fast_at_knots',
                 sm_fast,
             )
+
         return sm_fast_at_knots
