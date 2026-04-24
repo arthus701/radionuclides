@@ -49,7 +49,6 @@ annual_Be10_data['Be10_detrended'] = annual_Be10_data.groupby(
     'time_bin', observed=True,
 )['Be10'].transform(lambda x: x - x.mean())
 
-
 annual_Be10_data['dBe10'] = 0.1
 
 annual_Be10_data = annual_Be10_data.query(
@@ -67,13 +66,13 @@ annual_Be10_data.sort_values(by='t', inplace=True)
 annual_Be10_data.reset_index(inplace=True, drop=True)
 
 
-# crude lowpass filter
-def butter_lowpass_filter(data, highcut, fs, order=5):
+# crude bandpass filter
+def butter_bandpass_filter(data, lowcut, highcut, fs, order=5):
     sos = butter(
         order,
-        highcut,
+        [lowcut, highcut],
         fs=fs,
-        btype='low',
+        btype='band',
         analog=False,
         output='sos',
     )
@@ -81,7 +80,7 @@ def butter_lowpass_filter(data, highcut, fs, order=5):
     return y
 
 
-def interp_LP(x, y, lower=1 / 12):
+def interp_BP(x, y, lower=1 / 18, upper=1 / 6):
     interp_x, dt = np.linspace(
         x.min(),
         x.max(),
@@ -94,22 +93,22 @@ def interp_LP(x, y, lower=1 / 12):
         y,
     )
 
-    interp_y_BP = butter_lowpass_filter(
+    interp_y_BP = butter_bandpass_filter(
         interp_y,
         lower,
+        upper,
         fs=1 / dt,
     )
     return np.interp(x, interp_x, interp_y_BP)
 
 
 detrended = np.copy(annual_Be10_data['Be10_detrended'].values)
-lowpassed_data = interp_LP(
+lowpassed_data = interp_BP(
     annual_Be10_data['t'].values,
     annual_Be10_data['Be10_detrended'].values,
-    lower=1/4,
 )
-annual_Be10_data['Be10_detrended'] = lowpassed_data
-annual_Be10_data['dBe10'] = 0.07
+# annual_Be10_data['Be10_detrended'] = lowpassed_data
+# annual_Be10_data['dBe10'] = 0.07
 
 if __name__ == '__main__':
     from matplotlib import pyplot as plt
