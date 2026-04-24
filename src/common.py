@@ -14,7 +14,6 @@ from parameters import (
     t_solar_fine,
     step_solar_coarse,
     step_solar_fine,
-    mu_solar,
     sigma_solar,
     tau_solar,
     use_11year_cycle,
@@ -116,13 +115,13 @@ solar_constr = pd.read_table(
 idx_solar = np.argmin(
     np.abs(solar_constr['Year'].min() - knots_solar)
 ).flatten()
-ref_min = knots_solar[idx_solar].item() - step_solar_fine / 2
-bins = np.arange(ref_min, t_max + 2 * step_solar_fine, step_solar_fine)
+ref_min = knots_solar[idx_solar].item() - step_solar_coarse / 2
+
+bins = np.arange(ref_min, t_max + step_solar_coarse, step_solar_coarse)
 solar_constr['Interval'] = pd.cut(solar_constr['Year'], bins)
 
 ref_solar_years = []
 ref_solar = []
-
 for group in solar_constr.groupby('Interval', observed=True):
     ref_solar_years.append(group[0].mid)
     ref_solar.append(group[1]['Phi (MV)'].mean())
@@ -130,45 +129,26 @@ for group in solar_constr.groupby('Interval', observed=True):
 ref_solar_years = np.array(ref_solar_years)
 ref_solar = np.array(ref_solar)
 
-ref_solar_df = pd.DataFrame(
-    data={
-        't': ref_solar_years,
-        'Phi': ref_solar,
-    }
-)
-ref_solar_df['Phi avg.'] = moving_average(ref_solar_df, tau_solar, key='Phi')
-ref_solar_df['Phi fast'] = ref_solar_df['Phi'] - ref_solar_df['Phi avg.']
+bins_fine = np.arange(ref_min, t_max + step_solar_fine, step_solar_fine)
+solar_constr['Interval_fine'] = pd.cut(solar_constr['Year'], bins_fine)
 
-n_ref_solar = len(ref_solar_df)
+ref_solar_years_fine = []
+ref_solar_fine = []
+for group in solar_constr.groupby('Interval_fine', observed=True):
+    ref_solar_years_fine.append(group[0].mid)
+    fine_mean = group[1]['Phi (MV)'].mean()
+    idx = np.argmin(np.abs(group[0].mid - ref_solar_years)).flatten().item()
+    ref_solar_fine.append(fine_mean - ref_solar[idx])
 
-cov_obs = matern_kernel(
-    ref_solar_df['t'].values,
-    tau=tau_solar,
-    sigma=sigma_solar,
-)
-cor_obs = matern_kernel(
-    knots_solar,
-    ref_solar_df['t'].values,
-    tau=tau_solar,
-    sigma=sigma_solar,
-)
+ref_solar_years_fine = np.array(ref_solar_years_fine)
+ref_solar_fine = np.array(ref_solar_fine)
+
 cov_solar = matern_kernel(
     knots_solar,
     tau=tau_solar,
     sigma=sigma_solar,
 )
-
-_icov_obs = np.linalg.inv(cov_obs + 1e-4*np.eye(len(ref_solar_df['t'].values)))
-prior_mean_solar = mu_solar + cor_obs @ _icov_obs @ \
-    (ref_solar_df['Phi avg.'] - mu_solar)
-cov_solar = cov_solar - cor_obs @ _icov_obs @ cor_obs.T
-
-# prior_mean_solar = np.ones(len(knots_solar)) * mean_solar
-prior_mean_solar = prior_mean_solar[:-n_ref_solar]
-chol_solar = np.linalg.cholesky(cov_solar+1e-6*np.eye(len(knots_solar)))[
-    :-n_ref_solar,
-    :-n_ref_solar,
-]
+chol_solar = np.linalg.cholesky(cov_solar+1e-6*np.eye(len(knots_solar)))
 
 
 # -----------------------------------------------------------------------------
@@ -306,4 +286,33 @@ if __name__ == '__main__':
 
     fig.tight_layout()
 
+    fig_sol, ax_sol = plt.subplots(
+        1, 1,
+        figsize=(10, 5),
+    )
+    ax_sol.scatter(
+        solar_constr['Year'],
+        solar_constr['Phi (MV)'],
+        color='grey',
+        alpha=0.3,
+        zorder=-1,
+    )
+    ax_sol.plot(
+        ref_solar_years,
+        ref_solar,
+        ls='--',
+        color='C0',
+    )
+    ref_solar_at_fine = np.interp(
+        ref_solar_years_fine,
+        ref_solar_years,
+        ref_solar,
+    )
+    ax_sol.plot(
+        ref_solar_years_fine,
+        ref_solar_at_fine + ref_solar_fine,
+        color='C0',
+    )
+    ax_sol.set_xlabel('time [yrs.]')
+    ax_sol.set_ylabel('$\Phi$ [MV]')
     plt.show()
