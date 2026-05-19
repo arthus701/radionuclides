@@ -179,29 +179,41 @@ radData.sort_values(by='t', inplace=True)
 annual_C14_data = pd.read_excel(
     SCRIPT_DIR
     + '/../dat/'
-    + 'ProductionRates100Versions_Matern3_2sigma2tau2.xlsx',
-    skiprows=7,
+    # + 'ProductionRates100Versions_Matern3_2sigma2tau2.xlsx',
+    + 'c14_prod_PMIP_A-B-D.xlsx',
 )
-annual_C14_data['t'] = 1950 + annual_C14_data['age -yr BP']
+annual_C14_data['t'] = 1950 - annual_C14_data['Years BP']
+annual_C14_data['C14'] = annual_C14_data['c14_A']
+annual_C14_data['dC14'] = annual_C14_data['sigma_c14_A']
+
+# annual_C14_data['t'] = 1950 + annual_C14_data['age -yr BP']
 # annual_ensemble = annual_C14_data.values[:, 5:-1]
 
 # annual_C14_data['C14'] = annual_ensemble.mean(axis=1)
 # annual_C14_data['dC14'] = annual_ensemble.std(axis=1)
 
-annual_C14_data['C14'] = annual_C14_data.values[:, 1]
-annual_C14_data['dC14'] = annual_C14_data.values[:, 2]
+# annual_C14_data['C14'] = annual_C14_data.values[:, 1]
+# annual_C14_data['dC14'] = annual_C14_data.values[:, 2]
 
 annual_C14_data['C14'] = moving_average(annual_C14_data, 2)
 
-annual_C14_data = annual_C14_data[annual_C14_data['t'] > -1000]
+# annual_C14_data = annual_C14_data[annual_C14_data['t'] > t_solar_fine]
 
 annual_C14_data.reset_index(inplace=True, drop=True)
-annual_C14_data['dC14'] = 0.1
+# annual_C14_data['dC14'] = 0.1
 
 annual_C14_data = annual_C14_data[['t', 'C14', 'dC14']]
 
-# exclude solar storm
-idx = annual_C14_data.query('773.5 <= t and t <= 775.5').index
+# exclude solar storm at 993 CE
+idx = annual_C14_data.query('991 <= t and t <= 995').index
+annual_C14_data.loc[idx, 'C14'] = np.nan
+
+# exclude solar storm at 775 CE
+idx = annual_C14_data.query('773 <= t and t <= 777').index
+annual_C14_data.loc[idx, 'C14'] = np.nan
+
+# exclude solar storm at -661 CE
+idx = annual_C14_data.query('-663 <= t and t <= -659').index
 annual_C14_data.loc[idx, 'C14'] = np.nan
 
 t_min_C14 = annual_C14_data['t'].min()
@@ -222,13 +234,13 @@ annual_C14_data['C14_detrended'] = annual_C14_data.groupby(
     'time_bin', observed=True,
 )['C14'].transform(lambda x: x - x.mean())
 
-brehm_data_CE = (969, 1933)
-brehm_data_BCE = (-1000, -2)
+# brehm_data_CE = (969, 1933)
+# brehm_data_BCE = (-1000, -2)
 
-annual_C14_data = annual_C14_data.query(
-    f'({brehm_data_CE[0]} <= t and t <= {brehm_data_CE[1]})'
-    f'or ({brehm_data_BCE[0]} <= t and t <= {brehm_data_BCE[1]})'
-)
+# annual_C14_data = annual_C14_data.query(
+#     f'({brehm_data_CE[0]} <= t and t <= {brehm_data_CE[1]})'
+#     f'or ({brehm_data_BCE[0]} <= t and t <= {brehm_data_BCE[1]})'
+# )
 annual_C14_data = annual_C14_data.query(
     f'{t_min} <= t and t <= {t_max}'
 )
