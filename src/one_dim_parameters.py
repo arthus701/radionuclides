@@ -10,12 +10,12 @@ use_11year_cycle = True
 
 # -----------------------------------------------------------------------------
 # Range and resolution
-t_min = 1500
-t_solar_fine = 1500
+t_min = -1000
+t_solar_fine = -1000
 t_max = 2000
 step = 50
 step_solar_coarse = 22
-step_solar_fine = 2
+step_solar_fine = 1
 
 # -----------------------------------------------------------------------------
 # Magnetic field parameters
