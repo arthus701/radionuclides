@@ -233,7 +233,7 @@ annual_C14_data['time_bin'] = pd.cut(annual_C14_data['t'], bins)
 annual_C14_data['C14_detrended'] = annual_C14_data.groupby(
     'time_bin', observed=True,
 )['C14'].transform(lambda x: x - x.mean())
-
+# annual_C14_data['C14_detrended'] -= annual_C14_data['C14_detrended'].mean()
 # brehm_data_CE = (969, 1933)
 # brehm_data_BCE = (-1000, -2)
 
@@ -280,7 +280,7 @@ if __name__ == '__main__':
     )
     ax.errorbar(
         annual_C14_data['t'],
-        annual_C14_data['C14'],
+        annual_C14_data['C14_detrended'],
         yerr=annual_C14_data['dC14'],
         ls='',
         color='C0',
@@ -288,7 +288,7 @@ if __name__ == '__main__':
     )
     ax.scatter(
         annual_C14_data['t'],
-        annual_C14_data['C14'],
+        annual_C14_data['C14_detrended'],
         ls='',
         color='C0',
         marker='.',
