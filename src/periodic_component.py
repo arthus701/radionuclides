@@ -23,7 +23,7 @@ class SolarPeriodicComponent():
         self.ref_solar = ref_solar
 
         SIGMA = 250
-        AMPLITUDE = 250
+        AMPLITUDE = 0
         PHASE = 0.51 * 180
         PERIOD = 10.4
 
@@ -72,9 +72,7 @@ class SolarPeriodicComponent():
                 self.prior_mean = prior_mean[:-n_ref_solar]
                 self.chol_solar = chol_solar
             else:
-                self.prior_mean = AMPLITUDE * np.sin(
-                    2 * np.pi * (PHASE / 360 + self.knots / PERIOD)
-                )
+                self.prior_mean = mean_function
                 cov_solar = kernel(self.knots)
 
                 self.chol_solar = np.linalg.cholesky(
