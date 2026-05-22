@@ -35,8 +35,8 @@ from common import (
 # from brehm_data import brehm_data as annual_C14_data
 from annual_be10_data import annual_Be10_data
 
-# from fast_component import SolarFastComponent
-from periodic_component import SolarPeriodicComponent
+from fast_component import SolarFastComponent
+# from periodic_component import SolarPeriodicComponent
 
 fac = 0.63712**3
 
@@ -241,11 +241,18 @@ with pm.Model() as mcModel:
     )
 
     # Model 11-year cycle as redidual, using annual data
-    solar_11 = SolarPeriodicComponent(
+    # solar_11 = SolarPeriodicComponent(
+    #     knots_solar_fine,
+    #     period_solar=tau_fast_period,
+    #     # tau_solar=tau_solar,
+    #     tau_solar=20.,
+    #     # ref_solar_knots=ref_solar_df['t'].values,
+    #     # ref_solar=ref_solar_df['Phi fast'].values,
+    # )
+    solar_11 = SolarFastComponent(
         knots_solar_fine,
-        period_solar=tau_fast_period,
         # tau_solar=tau_solar,
-        tau_solar=20.,
+        tau_solar=10.,
         # ref_solar_knots=ref_solar_df['t'].values,
         # ref_solar=ref_solar_df['Phi fast'].values,
     )
