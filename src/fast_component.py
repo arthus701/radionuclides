@@ -1,7 +1,7 @@
 import numpy as np
 import pymc as pm
 
-from utils import matern_kernel
+from utils import sqe_kernel
 
 
 class SolarFastComponent():
@@ -28,17 +28,17 @@ class SolarFastComponent():
             if ref_solar_knots is not None:
                 n_ref_solar = len(ref_solar_knots)
 
-                cov_solar = matern_kernel(
+                cov_solar = sqe_kernel(
                     self.knots,
                     sigma=200,
                     tau=tau_solar,
                 )
-                cov_obs = matern_kernel(
+                cov_obs = sqe_kernel(
                     ref_solar_knots,
                     tau=tau_solar,
                     sigma=200,
                 )
-                cor_obs = matern_kernel(
+                cor_obs = sqe_kernel(
                     knots_solar,
                     ref_solar_knots,
                     tau=tau_solar,
@@ -59,9 +59,9 @@ class SolarFastComponent():
                 self.chol_solar = \
                     chol_solar[:-n_ref_solar, :-n_ref_solar] / 200
             else:
-                self.prior_mean = 0
+                self.prior_mean = np.zeros_like(self.knots)
 
-                cov_solar = matern_kernel(
+                cov_solar = sqe_kernel(
                     self.knots,
                     sigma=1.,
                     tau=tau_solar,
@@ -94,13 +94,19 @@ class SolarFastComponent():
         sm_fast = damping * sm_fast_scale * (
             self.prior_mean + self.chol_solar @ sm_cent_fast
         )
-        sm_fast_at_knots = pm.Deterministic(
-            'sm_fast_at_knots',
-            pm.math.concatenate(
-                (
-                    sm_fast,
-                    self.ref_solar,
-                ),
+        if self.ref_solar is not None:
+            sm_fast_at_knots = pm.Deterministic(
+                'sm_fast_at_knots',
+                pm.math.concatenate(
+                    (
+                        sm_fast,
+                        self.ref_solar,
+                    ),
+                )
             )
-        )
+        else:
+            sm_fast_at_knots = pm.Deterministic(
+                'sm_fast_at_knots',
+                sm_fast,
+            )
         return sm_fast_at_knots
