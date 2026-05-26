@@ -1,7 +1,9 @@
+from functools import partial
+
 import numpy as np
 import pymc as pm
 
-from utils import cosine_kernel, sqe_kernel
+from utils import quasiperiodic_kernel
 
 
 class SolarPeriodicComponent():
@@ -20,11 +22,21 @@ class SolarPeriodicComponent():
         self.jitter = jitter
         self.ref_solar = ref_solar
 
-        AMPLITUDE = 250
+        SIGMA = 250
+        AMPLITUDE = 0
         PHASE = 0.51 * 180
         PERIOD = 10.4
+
         mean_function = AMPLITUDE * np.sin(
             2 * np.pi * (PHASE / 360 + self.knots / PERIOD)
+        )
+
+        kernel = partial(
+            quasiperiodic_kernel,
+            sigma=SIGMA,
+            p=self.period,
+            tau=self.tau,
+            gamma=1.0,
         )
 
         if self.tau < 0:
@@ -41,35 +53,9 @@ class SolarPeriodicComponent():
                     2 * np.pi * (PHASE / 360 + ref_solar_knots / PERIOD)
                 )
 
-                cov_solar = cosine_kernel(
-                    self.knots,
-                    sigma=250.,
-                    p=self.period,
-                ) * sqe_kernel(
-                    self.knots,
-                    tau=self.tau,
-                    sigma=1.,
-                )
-                cov_obs = cosine_kernel(
-                    ref_solar_knots,
-                    sigma=250.,
-                    p=self.period,
-                ) * sqe_kernel(
-                    ref_solar_knots,
-                    tau=self.tau,
-                    sigma=1.,
-                )
-                cor_obs = cosine_kernel(
-                    self.knots,
-                    ref_solar_knots,
-                    sigma=250.,
-                    p=self.period,
-                ) * sqe_kernel(
-                    self.knots,
-                    ref_solar_knots,
-                    tau=self.tau,
-                    sigma=1.,
-                )
+                cov_solar = kernel(self.knots)
+                cov_obs = kernel(ref_solar_knots)
+                cor_obs = kernel(self.knots, ref_solar_knots)
 
                 _icov_obs = np.linalg.inv(
                     cov_obs + 2500 * np.eye(len(ref_solar_knots))
@@ -83,20 +69,11 @@ class SolarPeriodicComponent():
                     + self.jitter * np.eye(len(self.knots) - n_ref_solar)
                 )
 
-                self.prior_mean = prior_mean[:-n_ref_solar] / 250
-                self.chol_solar = chol_solar / 250
+                self.prior_mean = prior_mean[:-n_ref_solar]
+                self.chol_solar = chol_solar
             else:
-                self.prior_mean = np.zeros_like(self.knots)
-
-                cov_solar = cosine_kernel(
-                    self.knots,
-                    sigma=1.,
-                    p=self.period,
-                ) * sqe_kernel(
-                    self.knots,
-                    tau=self.tau,
-                    sigma=1.,
-                )
+                self.prior_mean = mean_function
+                cov_solar = kernel(self.knots)
 
                 self.chol_solar = np.linalg.cholesky(
                     cov_solar + self.jitter * np.eye(len(self.knots))
@@ -115,10 +92,10 @@ class SolarPeriodicComponent():
         # sm_fast_scale = pm.Gamma(
         #     'sm_fast_scale',
         #     alpha=3,
-        #     beta=3/200,
+        #     beta=3,
         #     size=1,
         # )
-        sm_fast_scale = 250     # MeV
+        sm_fast_scale = 1
         # damping = pm.math.sigmoid(
         #     0.1 * (self.knots + 100)
         # )
@@ -141,4 +118,5 @@ class SolarPeriodicComponent():
                 'sm_fast_at_knots',
                 sm_fast,
             )
+
         return sm_fast_at_knots

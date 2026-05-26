@@ -18,6 +18,7 @@ from parameters import (
     # tau_solar,
     # tau_solar_fast,
     tau_fast_period,
+    use_11year_cycle,
 )
 
 from common import (
@@ -34,13 +35,10 @@ from common import (
     idx_I,
     idx_F,
     knots_solar,
-    knots_solar_fine,
-    n_ref_solar,
-    ref_solar_df,
+    ref_solar_years,
+    ref_solar,
     chol_solar,
-    prior_mean_solar,
     radData,
-    # annual_C14_data,
     idx_GL,
     idx_NH,
     idx_SH,
@@ -49,18 +47,10 @@ from common import (
     prod_C14,
 )
 
-from brehm_data import brehm_data
-
-# from fast_component import SolarFastComponent
-from periodic_component import SolarPeriodicComponent
-
 ref_coeffs = pt.as_tensor(_ref_coeffs)
 base_tensor = pt.as_tensor(base.transpose(1, 0, 2))
 chol_tensor = pt.as_tensor(chol)
 fac = 0.63712**3
-
-annual_C14_data = brehm_data
-
 
 with pm.Model() as mcModel:
     # -------------------------------------------------------------------------
@@ -203,12 +193,11 @@ with pm.Model() as mcModel:
         'sm_cent',
         mu=0,
         sigma=1,
-        size=(len(knots_solar)-n_ref_solar,),
+        size=len(knots_solar),
     )
-
+    # XXX One could use unscaled samples directly
     # correlated samples
-    sm_at = chol_solar @ sm_cent + prior_mean_solar
-
+    sm_at = chol_solar @ sm_cent + mu_solar
     # uniform correlated samples via cdf (normal w. prior mean and prior var)
     sm_at -= mu_solar
     sm_at /= sigma_solar
@@ -293,22 +282,30 @@ with pm.Model() as mcModel:
 
     sm_at_knots = pm.Deterministic(
         'sm_at_knots',
-        pm.math.concatenate(
-            (
-                sm_bimod,
-                ref_solar_df['Phi avg.'].values,
-            ),
-        ),
+        sm_bimod,
+    )
+
+    sm_at_ref = interp1d(
+        ref_solar_years,
+        knots_solar,
+        sm_at_knots,
+    )
+
+    pm.Normal(
+        'sm_anchor_avg',
+        mu=sm_at_ref - ref_solar,
+        sigma=50,
+        observed=np.zeros_like(ref_solar),
     )
 
     sm_rad = interp1d(
-        radData['t'],
+        radData['t'].values,
         knots_solar,
         sm_at_knots,
     )
     # XXX potential speedup if interpolation is done on dm
     gs_rad = interp(
-        radData['t'],
+        radData['t'].values,
         knots,
         gs_at_knots[:4].T,
     )
@@ -384,59 +381,141 @@ with pm.Model() as mcModel:
     )
 
     # Model 11-year cycle as redidual, using annual data
-    # XXX potential speedup if interpolation is done on dm
-    solar_11 = SolarPeriodicComponent(
-        knots_solar_fine,
-        period_solar=tau_fast_period,
-        # tau_solar=tau_solar,
-        tau_solar=20.,
-        ref_solar_knots=ref_solar_df['t'].values,
-        ref_solar=ref_solar_df['Phi fast'].values,
-    )
+    if use_11year_cycle:
+        from common import (
+            knots_solar_fine,
+            ref_solar_years_fine,
+            annual_C14_data,
+            ref_solar_fine,
+        )
+        # from brehm_data import brehm_data as annual_C14_data
+        from annual_be10_data import annual_Be10_data
 
-    gs_rad_fine = interp(
-        annual_C14_data['t'],
-        knots,
-        gs_at_knots[:4].T,
-    )
+        # from fast_component import SolarFastComponent
+        from periodic_component import SolarPeriodicComponent
+        solar_11 = SolarPeriodicComponent(
+            knots_solar_fine,
+            period_solar=tau_fast_period,
+            # tau_solar=tau_solar,
+            tau_solar=20.,
+            # ref_solar_knots=ref_solar_df['t'].values,
+            # ref_solar=ref_solar_df['Phi fast'].values,
+        )
+        # solar_11 = SolarFastComponent(
+        #     knots_solar_fine,
+        #     # tau_solar=tau_solar,
+        #     tau_solar=2.,
+        #     # ref_solar_knots=ref_solar_df['t'].values,
+        #     # ref_solar=ref_solar_df['Phi fast'].values,
+        # )
+        sm_fast_at_knots = solar_11.get_sm_at_fast()
 
-    dm_fine = fac * pt.sqrt(
-        pt.sum(
-            pt.square(gs_rad_fine[:, :3]),
-            axis=1,
-        ),
-    )
+        sm_fast_at_ref = interp1d(
+            ref_solar_years_fine,
+            knots_solar_fine,
+            sm_fast_at_knots,
+        )
 
-    sm_rad_fine = interp1d(
-        annual_C14_data['t'],
-        knots_solar,
-        sm_at_knots,
-    )
-    sm_11_fine = interp1d(
-        annual_C14_data['t'],
-        knots_solar_fine,
-        solar_11.get_sm_at_fast(),
-    )
+        pm.Normal(
+            'sm_anchor_fine',
+            mu=sm_fast_at_ref - ref_solar_fine,
+            sigma=20,
+            observed=np.zeros_like(ref_solar_fine),
+        )
+        # -------------------------------------------------------------------------
+        # Annual C14
+        gs_rad_fine_C14 = interp(
+            annual_C14_data['t'].values,
+            knots,
+            gs_at_knots[:4].T,
+        )
 
-    q_C14_fine = prod_C14(dm_fine, sm_rad_fine)
-    q_C14_11_fine = prod_C14(dm_fine, sm_rad_fine + sm_11_fine)
+        dm_fine_C14 = fac * pt.sqrt(
+            pt.sum(
+                pt.square(gs_rad_fine_C14[:, :3]),
+                axis=1,
+            ),
+        )
 
-    residual_q_C14 = q_C14_11_fine - q_C14_fine
+        sm_rad_fine_C14 = interp1d(
+            annual_C14_data['t'].values,
+            knots_solar,
+            sm_at_knots,
+        )
+        sm_11_fine_C14 = interp1d(
+            annual_C14_data['t'].values,
+            knots_solar_fine,
+            sm_fast_at_knots,
+        )
 
-    rC14_11 = pm.Deterministic(
-        'rC14_11',
-        (
-            residual_q_C14 / cal_c14
-            - annual_C14_data['C14_detrended'].values
-        ) / annual_C14_data['dC14'].values,
-    )
-    c14_11_obs = pm.Normal(
-        'C14_11',
-        # nu=1 + nus[5],
-        mu=rC14_11,
-        sigma=1.,
-        observed=np.zeros(len(annual_C14_data)),
-    )
+        q_C14_fine = prod_C14(dm_fine_C14, sm_rad_fine_C14)
+        q_C14_11_fine = prod_C14(dm_fine_C14, sm_rad_fine_C14 + sm_11_fine_C14)
+
+        residual_q_C14 = q_C14_11_fine - q_C14_fine
+
+        rC14_11 = pm.Deterministic(
+            'rC14_11',
+            (
+                residual_q_C14 / cal_c14
+                - annual_C14_data['C14_detrended'].values
+            ) / annual_C14_data['dC14'].values,
+        )
+        c14_11_obs = pm.Normal(
+            'C14_11',
+            # nu=1 + nus[5],
+            mu=rC14_11,
+            sigma=1.,
+            observed=np.zeros(len(annual_C14_data)),
+        )
+
+        # -------------------------------------------------------------------------
+        # Annual Be10
+        gs_rad_fine_Be10 = interp(
+            annual_Be10_data['t'].values,
+            knots,
+            gs_at_knots[:4].T,
+        )
+
+        dm_fine_Be10 = fac * pt.sqrt(
+            pt.sum(
+                pt.square(gs_rad_fine_Be10[:, :3]),
+                axis=1,
+            ),
+        )
+
+        sm_rad_fine_Be10 = interp1d(
+            annual_Be10_data['t'].values,
+            knots_solar,
+            sm_at_knots,
+        )
+        sm_11_fine_Be10 = interp1d(
+            annual_Be10_data['t'].values,
+            knots_solar_fine,
+            sm_fast_at_knots,
+        )
+
+        q_Be10_fine = prod_Be10(dm_fine_Be10, sm_rad_fine_Be10)
+        q_Be10_11_fine = prod_Be10(
+            dm_fine_Be10,
+            sm_rad_fine_Be10 + sm_11_fine_Be10
+        )
+
+        residual_q_Be10 = q_Be10_11_fine - q_Be10_fine
+
+        rBe10_11_NH = pm.Deterministic(
+            'rBe10_11_NH',
+            (
+                residual_q_Be10 / cal_nh
+                - annual_Be10_data['Be10_detrended'].values
+            ) / annual_Be10_data['dBe10'].values,
+        )
+        # be10_11_obs = pm.Normal(
+        #     'Be10_11_NH',
+        #     # nu=1 + nus[5],
+        #     mu=rBe10_11_NH,
+        #     sigma=1.,
+        #     observed=np.zeros(len(annual_Be10_data)),
+        # )
 
 if __name__ == '__main__':
     from pymc.sampling import jax as pmj
