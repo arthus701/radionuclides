@@ -12,7 +12,7 @@ from paleokalmag.data_handling import Data
 
 from pymagglobal.utils import lmax2N, i2lm_l    # , scaling
 
-from utils import matern_kernel
+from utils import matern_kernel, moving_average
 
 from parameters import (
     lmax,
@@ -292,7 +292,7 @@ annual_C14_data['dC14'] = annual_C14_data['sigma_c14_B']
 # annual_C14_data['C14'] = annual_C14_data.values[:, 1]
 # annual_C14_data['dC14'] = annual_C14_data.values[:, 2]
 
-# annual_C14_data['C14'] = moving_average(annual_C14_data, 2)
+annual_C14_data['C14'] = moving_average(annual_C14_data, 2)
 
 # annual_C14_data = annual_C14_data[annual_C14_data['t'] > t_solar_fine]
 
