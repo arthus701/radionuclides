@@ -196,7 +196,7 @@ annual_C14_data['dC14'] = annual_C14_data['sigma_c14_D']
 # annual_C14_data['C14'] = annual_C14_data.values[:, 1]
 # annual_C14_data['dC14'] = annual_C14_data.values[:, 2]
 
-# annual_C14_data['C14'] = moving_average(annual_C14_data, 2)
+annual_C14_data['C14'] = moving_average(annual_C14_data, 2)
 
 # annual_C14_data = annual_C14_data[annual_C14_data['t'] > t_solar_fine]
 
