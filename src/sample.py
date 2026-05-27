@@ -391,16 +391,17 @@ with pm.Model() as mcModel:
         # from brehm_data import brehm_data as annual_C14_data
         from annual_be10_data import annual_Be10_data
 
-        # from fast_component import SolarFastComponent
         from periodic_component import SolarPeriodicComponent
         solar_11 = SolarPeriodicComponent(
             knots_solar_fine,
             period_solar=tau_fast_period,
             # tau_solar=tau_solar,
-            tau_solar=20.,
+            tau_solar=30.,
             # ref_solar_knots=ref_solar_df['t'].values,
             # ref_solar=ref_solar_df['Phi fast'].values,
         )
+
+        # from fast_component import SolarFastComponent
         # solar_11 = SolarFastComponent(
         #     knots_solar_fine,
         #     # tau_solar=tau_solar,
@@ -408,6 +409,7 @@ with pm.Model() as mcModel:
         #     # ref_solar_knots=ref_solar_df['t'].values,
         #     # ref_solar=ref_solar_df['Phi fast'].values,
         # )
+
         sm_fast_at_knots = solar_11.get_sm_at_fast()
 
         sm_fast_at_ref = interp1d(
