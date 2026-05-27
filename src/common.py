@@ -279,8 +279,8 @@ annual_C14_data = pd.read_excel(
     + 'c14_prod_PMIP_A-B-D.xlsx',
 )
 annual_C14_data['t'] = 1950 - annual_C14_data['Years BP']
-annual_C14_data['C14'] = annual_C14_data['c14_D']
-annual_C14_data['dC14'] = annual_C14_data['sigma_c14_D']
+annual_C14_data['C14'] = annual_C14_data['c14_B']
+annual_C14_data['dC14'] = annual_C14_data['sigma_c14_B']
 # annual_C14_data['dC14'] = 0.01
 
 # annual_C14_data['t'] = 1950 + annual_C14_data['age -yr BP']
