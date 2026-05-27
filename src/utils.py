@@ -96,6 +96,30 @@ def interp1d(_x, _xp, _fp):
     return a * x + b
 
 
+def npinterp(_x, xp, fp):
+    """
+    Simple equivalent of np.interp to compute a linear interpolation. This
+    function will not extrapolate, but use the edge values for points outside
+    of _xp.
+    """
+    # No extrapolation!
+    x = np.clip(_x, xp[0], xp[-1])
+    # First we find the nearest neighbour
+    ind = np.argmin((x[:, None] - xp[None, :])**2, axis=1)
+    xi = xp[ind]
+    # Figure out if we are on the right or the left of nearest
+    s = np.sign(x - xi).astype(int)
+    # Perform linear interpolation
+    # (1-np.abs(s))*1e-10) to prevent divide by zero error if we are exactly
+    # at the knot points
+    a = (fp[ind + s] - fp[ind]) \
+        / (xp[ind + s] - xp[ind] + (1-np.abs(s))*1e-10)[:, None]
+
+    b = fp[ind] - a * xp[ind, None]
+
+    return a * x[:, None] + b
+
+
 def matern_kernel(x, y=None, tau=2, sigma=1.):
     if y is None:
         y = x
