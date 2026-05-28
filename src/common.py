@@ -6,14 +6,30 @@ import pandas as pd
 
 from scipy.signal import butter, sosfiltfilt
 
+from paleokalmag.utils import dsh_basis
+from paleokalmag.data_handling import Data
+# from paleokalmag.data_handling import read_data
+
+from pymagglobal.utils import lmax2N, i2lm_l    # , scaling
+
 from utils import matern_kernel, moving_average
 
 from parameters import (
+    lmax,
     t_min,
     t_max,
+    step,
     t_solar_fine,
     step_solar_coarse,
     step_solar_fine,
+    gamma_0,
+    alpha_list,
+    tau_list,
+    dip,
+    alpha_dip,
+    omega,
+    xi,
+    chi,
     sigma_solar,
     tau_solar,
     use_11year_cycle,
@@ -64,6 +80,13 @@ def prod_Be10(dm, phi):
 
 
 # Derived parameters
+n_coeffs = lmax2N(lmax)
+knots = np.arange(
+    t_min,
+    t_max + step,
+    step,
+)
+
 if use_11year_cycle:
     knots_solar_fine = np.flip(
         np.arange(
@@ -96,6 +119,57 @@ else:
     step_solar_fine = step_solar_coarse
 
 # -----------------------------------------------------------------------------
+# Magnetic field model
+# Prior mean and covariance (as cholesky factors)
+prior_mean = np.zeros((n_coeffs, len(knots)))
+prior_mean[0] = gamma_0
+
+alphas = np.array([alpha_list[i2lm_l(it)-1]**2 for it in range(n_coeffs)])
+taus = np.array([tau_list[i2lm_l(it)-1] for it in range(n_coeffs)])
+
+alphas[0:dip] = alpha_dip**2
+taus[0:dip] = 1 / omega
+
+dt = np.abs(knots[:, None] - knots[None, :])
+diag = alphas
+itau = np.diag(1./taus)
+frac = dt[:, None, :, None] * itau[None, :, None, :]
+frac = np.abs(frac)
+# first axis are times, second axis are coeffs
+cov = (1 + frac) * np.exp(-frac) * np.diag(diag)[None, :, None, :]
+cov = np.diagonal(cov, axis1=1, axis2=3).copy()
+
+# axial dipole with different matrix:
+for it in range(dip):
+    cov[:, :, it] = alpha_dip**2 * 0.5 / xi * (
+        (xi + chi) * np.exp((xi - chi)*dt)
+        + (xi - chi) * np.exp(-(xi + chi)*dt)
+    )
+
+# Set the number of knots to be replaced by the reference model
+n_ref = 3
+
+_Kalmag = np.genfromtxt(
+    SCRIPT_DIR + '/../dat/Kalmag_CORE_MEAN_Radius_6371.2.txt'
+)
+# Ref coeffs should be of shape (n_coeffs, n_ref)
+ref_coeffs = _Kalmag[1:n_coeffs+1] / 1000
+
+chol = np.zeros((n_coeffs, len(knots)-n_ref, len(knots)-n_ref))
+
+for it in range(n_coeffs):
+    _cov = np.copy(cov[:len(knots)-n_ref, :len(knots)-n_ref, it])
+    _cor = cov[:, len(knots)-n_ref:, it]
+    _icov = np.linalg.inv(cov[len(knots)-n_ref:, len(knots)-n_ref:, it])
+    prior_mean[it] += _cor @ _icov @ \
+        (ref_coeffs[it] - prior_mean[it, len(knots)-n_ref:])
+
+    _cov -= _cor[:len(knots)-n_ref] @ _icov @ _cor[:len(knots)-n_ref].T
+    chol[it, :, :] = np.linalg.cholesky(_cov)
+
+# overwrite for usage in pyMC model
+prior_mean = prior_mean[:, :len(knots)-n_ref]
+# -----------------------------------------------------------------------------
 # Solar modulation model
 
 # Extract variations on regular and fast scale
@@ -122,6 +196,7 @@ solar_constr['Interval'] = pd.cut(solar_constr['Year'], bins)
 
 ref_solar_years = []
 ref_solar = []
+
 for group in solar_constr.groupby('Interval', observed=True):
     ref_solar_years.append(group[0].mid)
     ref_solar.append(group[1]['Phi (MV)'].mean())
@@ -153,6 +228,23 @@ chol_solar = np.linalg.cholesky(cov_solar+1e-6*np.eye(len(knots_solar)))
 
 # -----------------------------------------------------------------------------
 # Data setup
+# thermoremament magnetic data
+rawData = pd.read_csv(
+    SCRIPT_DIR + '/../dat/afm9k2_data.csv',
+)
+rawData['FID'] = 'afm9k.2_data'
+
+data = Data(rawData)
+
+idx_D = np.asarray(data.idx_D, dtype=int)
+idx_I = np.asarray(data.idx_I, dtype=int)
+idx_F = np.asarray(data.idx_F, dtype=int)
+
+z_at = data.inputs
+
+base = dsh_basis(lmax, z_at)
+base = base.reshape(lmax2N(lmax), z_at.shape[1], 3)
+
 # radionuclide production rate data
 radData = pd.read_table(
     SCRIPT_DIR + '/../dat/CRN_9k_230922.txt'
@@ -183,8 +275,8 @@ annual_C14_data = pd.read_excel(
     + 'c14_prod_PMIP_A-B-D.xlsx',
 )
 annual_C14_data['t'] = 1950 - annual_C14_data['Years BP']
-annual_C14_data['C14'] = annual_C14_data['c14_D']
-annual_C14_data['dC14'] = annual_C14_data['sigma_c14_D']
+annual_C14_data['C14'] = annual_C14_data['c14_B']
+annual_C14_data['dC14'] = annual_C14_data['sigma_c14_B']
 # annual_C14_data['dC14'] = 0.01
 
 # annual_C14_data['t'] = 1950 + annual_C14_data['age -yr BP']
@@ -327,5 +419,5 @@ if __name__ == '__main__':
         color='C0',
     )
     ax_sol.set_xlabel('time [yrs.]')
-    ax_sol.set_ylabel('$\Phi$ [MV]')
+    ax_sol.set_ylabel(r'$\Phi$ [MV]')
     plt.show()

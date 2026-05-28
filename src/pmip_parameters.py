@@ -3,7 +3,7 @@ import numpy as np
 from pymagglobal.utils import REARTH
 
 # -----------------------------------------------------------------------------
-prefix = 'one_dim_'
+prefix = 'radio_pmip_'
 fix_calibration = False
 use_longterm = False
 use_11year_cycle = True
@@ -50,6 +50,7 @@ sigma_solar = 191
 tau_solar = 25.6
 tau_solar_fast = 4
 tau_fast_period = 10.4
+tai_fast_correlation_time = 30
 
 # -----------------------------------------------------------------------------
 # Other parameters
