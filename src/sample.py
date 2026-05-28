@@ -381,6 +381,10 @@ with pm.Model() as mcModel:
 
     # Model 11-year cycle as redidual, using annual data
     if use_11year_cycle:
+        from parameters import (
+            tau_fast_period,
+            tai_fast_correlation_time,
+        )
         from common import (
             knots_solar_fine,
             ref_solar_years_fine,
@@ -394,10 +398,7 @@ with pm.Model() as mcModel:
         solar_11 = SolarPeriodicComponent(
             knots_solar_fine,
             period_solar=tau_fast_period,
-            # tau_solar=tau_solar,
-            tau_solar=20.,
-            # ref_solar_knots=ref_solar_df['t'].values,
-            # ref_solar=ref_solar_df['Phi fast'].values,
+            tau_solar=tai_fast_correlation_time,
         )
 
         # from fast_component import SolarFastComponent
