@@ -293,7 +293,7 @@ with pm.Model() as mcModel:
     pm.Normal(
         'sm_anchor_avg',
         mu=sm_at_ref - ref_solar,
-        sigma=50,
+        sigma=5,
         observed=np.zeros_like(ref_solar),
     )
 
