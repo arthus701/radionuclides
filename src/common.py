@@ -173,18 +173,34 @@ prior_mean = prior_mean[:, :len(knots)-n_ref]
 # Solar modulation model
 
 # Extract variations on regular and fast scale
-solar_constr = pd.read_table(
-    SCRIPT_DIR + '/../dat/US10_phi_mon_tab_230907.txt',
-    sep=r'\s+',
-    skiprows=23,
-    header=None,
-    dtype=float,
-    engine='python',
-    names=[
-        'Year',
-        'Phi (MV)',
+# solar_constr = pd.read_table(
+#     SCRIPT_DIR + '/../dat/US10_phi_mon_tab_230907.txt',
+#     sep=r'\s+',
+#     skiprows=23,
+#     header=None,
+#     dtype=float,
+#     engine='python',
+#     names=[
+#         'Year',
+#         'Phi (MV)',
+#     ],
+# )
+solar_constr = pd.read_csv(
+    SCRIPT_DIR + '/../dat/HMP_GEO_O2023.csv',
+    usecols=[
+        'fracyear',
+        'phi_geo',
     ],
 )
+solar_constr.rename(
+    columns={
+        'fracyear': 'Year',
+        'phi_geo': 'Phi (MV)',
+    },
+    inplace=True,
+)
+solar_constr.dropna(inplace=True)
+solar_constr.reset_index(inplace=True, drop=True)
 
 idx_solar = np.argmin(
     np.abs(solar_constr['Year'].min() - knots_solar)
