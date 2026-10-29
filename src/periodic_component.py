@@ -3,7 +3,8 @@ from functools import partial
 import numpy as np
 import pymc as pm
 
-from utils import quasiperiodic_kernel
+# from utils import quasiperiodic_kernel
+from utils import cosine_kernel
 
 
 class SolarPeriodicComponent():
@@ -32,11 +33,12 @@ class SolarPeriodicComponent():
         )
 
         kernel = partial(
-            quasiperiodic_kernel,
+            # quasiperiodic_kernel,
+            cosine_kernel,
             sigma=SIGMA,
             p=self.period,
             tau=self.tau,
-            gamma=1.0,
+            # gamma=1.0,
         )
 
         if self.tau < 0:

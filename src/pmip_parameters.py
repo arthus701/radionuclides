@@ -3,7 +3,7 @@ import numpy as np
 from pymagglobal.utils import REARTH
 
 # -----------------------------------------------------------------------------
-prefix = 'radio_pmip_'
+prefix = 'radio_pmip_cosine_'
 fix_calibration = False
 use_longterm = False
 use_11year_cycle = True
