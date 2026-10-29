@@ -169,7 +169,7 @@ def cosine_kernel(x, y=None, sigma=1., p=11., tau=50.):
     y = np.asarray(y)
     frac_p = np.pi * np.abs((x[:, None] - y[None, :])) / p
     frac_t = np.abs((x[:, None] - y[None, :])) / tau
-    res = sigma**2 * np.cos(frac_p) * np.exp(-0.5 * frac_t**2)
+    res = sigma**2 * np.cos(2 * frac_p) * np.exp(-0.5 * frac_t**2)
     return res.reshape(x.shape[0], y.shape[0])
 
 
