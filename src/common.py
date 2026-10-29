@@ -6,11 +6,11 @@ import pandas as pd
 
 from scipy.signal import butter, sosfiltfilt
 
-from paleokalmag.utils import dsh_basis
 from paleokalmag.data_handling import Data
 # from paleokalmag.data_handling import read_data
 
 from pymagglobal.utils import lmax2N, i2lm_l    # , scaling
+from pymagglobal.dsh_basis import dsh_basis
 
 from utils import matern_kernel, moving_average
 
