@@ -10,7 +10,11 @@ from paleokalmag.data_handling import Data
 # from paleokalmag.data_handling import read_data
 
 from pymagglobal.utils import lmax2N, i2lm_l    # , scaling
-from pymagglobal.dsh_basis import dsh_basis
+try:
+    from pymagglobal.dsh_basis import dsh_basis
+except ImportError:
+    print("dsh_basis cannot be imported from pymagglobal. Trying paleokalmag instead.")
+    from paleokalmag.utils import dsh_basis
 
 from utils import matern_kernel, moving_average
 
